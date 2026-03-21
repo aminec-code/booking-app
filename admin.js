@@ -1,0 +1,594 @@
+// ─────────────────────────────────────────────
+//  ADMIN.JS  —  Lógica del dashboard de métricas
+// ─────────────────────────────────────────────
+
+// ── ESTADO ───────────────────────────────────
+const adminState = {
+  authenticated: false,
+  appointments:  [],
+  activeSection: 'resumen',
+};
+
+// ── INIT ─────────────────────────────────────
+
+document.addEventListener('DOMContentLoaded', () => {
+  checkAuth();
+});
+
+function checkAuth() {
+  const authed = sessionStorage.getItem('admin_authed') === '1';
+  if (authed) {
+    showDashboard();
+  } else {
+    showLogin();
+  }
+}
+
+// ── LOGIN ─────────────────────────────────────
+
+function showLogin() {
+  document.getElementById('login-screen').classList.remove('hidden');
+  document.getElementById('dashboard-screen').classList.add('hidden');
+
+  const form  = document.getElementById('login-form');
+  const input = document.getElementById('login-password');
+  const error = document.getElementById('login-error');
+
+  form?.addEventListener('submit', async e => {
+    e.preventDefault();
+    const pass    = input?.value || '';
+    const btn     = form.querySelector('button[type="submit"]');
+    if (btn) btn.disabled = true;
+
+    const ok = await ghlAdminLogin(pass);
+
+    if (ok) {
+      sessionStorage.setItem('admin_authed', '1');
+      adminState.authenticated = true;
+      showDashboard();
+    } else {
+      if (error) error.textContent = 'Contraseña incorrecta. Inténtalo de nuevo.';
+      input?.focus();
+      if (btn) btn.disabled = false;
+    }
+  });
+}
+
+function logout() {
+  sessionStorage.removeItem('admin_authed');
+  clearAdminToken();
+  adminState.authenticated = false;
+  location.reload();
+}
+
+// ── DASHBOARD ────────────────────────────────
+
+async function showDashboard() {
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('dashboard-screen').classList.remove('hidden');
+
+  // Mostrar nombre del lanzamiento
+  const launchName = document.getElementById('launch-name');
+  if (launchName) launchName.textContent = CONFIG.LAUNCH_NAME;
+
+  setupNavigation();
+  await loadData();
+}
+
+function setupNavigation() {
+  document.querySelectorAll('.nav-item[data-section]').forEach(item => {
+    item.addEventListener('click', () => {
+      const section = item.dataset.section;
+      navigateTo(section);
+    });
+  });
+}
+
+function navigateTo(section) {
+  adminState.activeSection = section;
+
+  // Actualizar nav items
+  document.querySelectorAll('.nav-item[data-section]').forEach(item => {
+    item.classList.toggle('active', item.dataset.section === section);
+  });
+
+  // Mostrar sección correspondiente
+  document.querySelectorAll('.admin-section').forEach(s => {
+    s.classList.toggle('hidden', s.dataset.section !== section);
+  });
+}
+
+// ── CARGA DE DATOS ────────────────────────────
+
+async function loadData() {
+  showLoadingIndicator(true);
+
+  let appointments = [];
+  let fromGHL = false;
+
+  // Intentar cargar desde GHL
+  try {
+    appointments = await ghlGetAppointments();
+    fromGHL = true;
+  } catch (err) {
+    console.warn('[Admin] GHL no respondió, usando localStorage:', err.message);
+  }
+
+  // Fallback: localStorage
+  if (!fromGHL || appointments.length === 0) {
+    const stored = getBookingsFromStorage();
+    if (stored.length > 0) {
+      appointments = stored.map(normalizeStoredBooking);
+    }
+  }
+
+  adminState.appointments = appointments;
+  showLoadingIndicator(false);
+
+  renderMetrics();
+  renderCharts();
+  renderTable();
+  renderConfigSection();
+}
+
+function showLoadingIndicator(loading) {
+  const indicator = document.getElementById('loading-indicator');
+  if (indicator) indicator.classList.toggle('hidden', !loading);
+}
+
+function getBookingsFromStorage() {
+  try {
+    return JSON.parse(localStorage.getItem('booking_app_reservas') || '[]');
+  } catch (_) { return []; }
+}
+
+/**
+ * Normaliza un registro de localStorage al formato de GHL appointment
+ */
+function normalizeStoredBooking(record) {
+  return {
+    id:            record.id,
+    title:         `${record.nombre} ${record.apellidos}`,
+    firstName:     record.nombre,
+    lastName:      record.apellidos,
+    email:         record.email,
+    phone:         record.telefono,
+    inversion:     record.inversion,
+    tier:          record.tier,
+    startTime:     `${record.fechaSeleccionada}T${record.slotSeleccionado}:00`,
+    status:        record.estado || 'confirmado',
+    appointmentId: record.appointmentId,
+    contactId:     record.contactId,
+  };
+}
+
+// ── ANÁLISIS DE DATOS ─────────────────────────
+
+function analyzeAppointments(appointments) {
+  const totalAgendados = appointments.length;
+
+  // Contar por tier (intentamos detectar tier de varias fuentes)
+  let vipCount   = 0;
+  let basicCount = 0;
+
+  appointments.forEach(apt => {
+    const tier = detectTier(apt);
+    if (tier === 'vip') vipCount++;
+    else               basicCount++;
+  });
+
+  // Agrupar por semana
+  const byWeek = { S1: 0, S2: 0, S3: 0 };
+  const weekRanges = getWeekRanges();
+
+  appointments.forEach(apt => {
+    const dateKey = getAppointmentDate(apt);
+    weekRanges.forEach(({ label, start, end }) => {
+      if (dateKey >= start && dateKey <= end) byWeek[label]++;
+    });
+  });
+
+  // Agrupar por día (últimos 14 días con datos)
+  const byDay = {};
+  appointments.forEach(apt => {
+    const dateKey = getAppointmentDate(apt);
+    if (dateKey) byDay[dateKey] = (byDay[dateKey] || 0) + 1;
+  });
+
+  // Tasa de completado (form starts vs confirmados)
+  const formStarts = parseInt(localStorage.getItem('booking_form_starts') || '0', 10);
+  const completedRate = formStarts > 0
+    ? Math.round((totalAgendados / formStarts) * 100)
+    : null;
+
+  return { totalAgendados, vipCount, basicCount, byWeek, byDay, completedRate, formStarts };
+}
+
+function detectTier(apt) {
+  // Primero miramos el campo tier directo (localStorage)
+  if (apt.tier) return apt.tier;
+
+  // Luego intentamos detectar por tags o campos
+  if (apt.tags) {
+    const tags = Array.isArray(apt.tags) ? apt.tags : [apt.tags];
+    if (tags.some(t => t.includes('vip')))   return 'vip';
+    if (tags.some(t => t.includes('basico'))) return 'basico';
+  }
+
+  // Por inversión declarada
+  if (apt.inversion) {
+    for (const [key, cfg] of Object.entries(CONFIG.TIERS)) {
+      if (cfg.inversiones.includes(apt.inversion)) return key;
+    }
+  }
+
+  return 'basico';
+}
+
+function getAppointmentDate(apt) {
+  const raw = apt.startTime || apt.start || apt.date || '';
+  if (!raw) return '';
+  return String(raw).substring(0, 10);
+}
+
+function getWeekRanges() {
+  const ranges = [];
+  let sIdx = 1;
+  Object.values(CONFIG.TIERS).forEach(tier => {
+    tier.semanas.forEach(s => {
+      ranges.push({ label: `S${sIdx}`, start: s.start, end: s.end });
+      sIdx++;
+    });
+  });
+  return ranges;
+}
+
+// ── MÉTRICAS ─────────────────────────────────
+
+function renderMetrics() {
+  const { totalAgendados, vipCount, basicCount, completedRate, formStarts } =
+    analyzeAppointments(adminState.appointments);
+
+  const vipPct   = totalAgendados > 0 ? Math.round((vipCount / totalAgendados) * 100) : 0;
+  const basicPct = totalAgendados > 0 ? Math.round((basicCount / totalAgendados) * 100) : 0;
+
+  setMetric('metric-total', totalAgendados, '');
+  setMetric('metric-vip',   vipCount, `${vipPct}% del total`);
+  setMetric('metric-basic', basicCount, `${basicPct}% del total`);
+
+  if (completedRate !== null) {
+    setMetric('metric-rate', `${completedRate}%`, `${formStarts} iniciaron el formulario`);
+  } else {
+    setMetric('metric-rate', '—', 'Sin datos de visitas');
+  }
+
+  // Badges de color
+  setBadge('metric-vip-badge',   'Prioritario', 'badge-blue');
+  setBadge('metric-basic-badge', 'Estándar',    'badge-gray');
+}
+
+function setMetric(id, value, sub) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const valEl = el.querySelector('.metric-value');
+  const subEl = el.querySelector('.metric-sub');
+  if (valEl) valEl.textContent = value;
+  if (subEl) subEl.textContent = sub;
+}
+
+function setBadge(id, text, cls) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = text;
+  el.className   = `badge ${cls}`;
+}
+
+// ── GRÁFICOS ──────────────────────────────────
+
+function renderCharts() {
+  const { vipCount, basicCount, byWeek, byDay } =
+    analyzeAppointments(adminState.appointments);
+
+  renderDonut(vipCount, basicCount);
+  renderBars(byWeek);
+  renderLineChart(byDay);
+}
+
+/* -- Donut -- */
+function renderDonut(vipCount, basicCount) {
+  const svg = document.getElementById('donut-svg');
+  if (!svg) return;
+
+  const total = vipCount + basicCount;
+  const radius = 48;
+  const cx = 65, cy = 65;
+  const circumference = 2 * Math.PI * radius;
+
+  let vipDash   = total > 0 ? (vipCount / total) * circumference : 0;
+  let basicDash = total > 0 ? (basicCount / total) * circumference : 0;
+
+  if (total === 0) {
+    // Círculo vacío
+    svg.innerHTML = `
+      <circle cx="${cx}" cy="${cy}" r="${radius}" fill="none" stroke="var(--border)" stroke-width="14"/>
+    `;
+  } else {
+    const offset1 = 0;
+    const offset2 = circumference - vipDash;
+
+    svg.innerHTML = `
+      <circle cx="${cx}" cy="${cy}" r="${radius}" fill="none" stroke="var(--border)" stroke-width="14"/>
+      <circle cx="${cx}" cy="${cy}" r="${radius}" fill="none"
+        stroke="var(--blue)" stroke-width="14"
+        stroke-dasharray="${vipDash} ${circumference - vipDash}"
+        stroke-dashoffset="${circumference * 0.25}"
+        stroke-linecap="round"
+        transform="rotate(-90 ${cx} ${cy})"/>
+      <circle cx="${cx}" cy="${cy}" r="${radius}" fill="none"
+        stroke="var(--amber)" stroke-width="14"
+        stroke-dasharray="${basicDash} ${circumference - basicDash}"
+        stroke-dashoffset="${circumference * 0.25 - vipDash}"
+        stroke-linecap="round"
+        transform="rotate(-90 ${cx} ${cy})"/>
+    `;
+  }
+
+  // Centro
+  const center = document.getElementById('donut-center');
+  if (center) {
+    center.querySelector('.donut-total').textContent = total;
+    center.querySelector('.donut-total-label').textContent = 'total';
+  }
+
+  // Leyenda
+  setLegendItem('legend-vip',   vipCount,   total);
+  setLegendItem('legend-basic', basicCount, total);
+}
+
+function setLegendItem(id, count, total) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+  const valEl = el.querySelector('.legend-val');
+  if (valEl) valEl.textContent = `${count} (${pct}%)`;
+}
+
+/* -- Barras horizontales -- */
+function renderBars(byWeek) {
+  const maxVal = Math.max(...Object.values(byWeek), 1);
+
+  Object.entries(byWeek).forEach(([label, count]) => {
+    const fillEl  = document.getElementById(`bar-fill-${label.toLowerCase()}`);
+    const countEl = document.getElementById(`bar-count-${label.toLowerCase()}`);
+    if (fillEl)  fillEl.style.width  = `${(count / maxVal) * 100}%`;
+    if (countEl) countEl.textContent = count;
+  });
+}
+
+/* -- Línea temporal -- */
+function renderLineChart(byDay) {
+  const canvas = document.getElementById('line-chart');
+  if (!canvas) return;
+
+  const ctx = canvas.getContext('2d');
+  const W   = canvas.offsetWidth  || 600;
+  const H   = canvas.offsetHeight || 160;
+
+  canvas.width  = W;
+  canvas.height = H;
+  ctx.clearRect(0, 0, W, H);
+
+  const entries = Object.entries(byDay).sort(([a], [b]) => a.localeCompare(b));
+  if (entries.length === 0) {
+    ctx.fillStyle = '#9CA3AF';
+    ctx.font      = '13px DM Sans, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Sin datos para mostrar', W / 2, H / 2);
+    return;
+  }
+
+  const values = entries.map(([, v]) => v);
+  const maxVal = Math.max(...values, 1);
+  const pad    = { top: 16, right: 16, bottom: 32, left: 32 };
+  const chartW = W - pad.left - pad.right;
+  const chartH = H - pad.top  - pad.bottom;
+
+  const xStep = entries.length > 1 ? chartW / (entries.length - 1) : chartW;
+
+  // Línea de cuadrícula
+  ctx.strokeStyle = '#E5E7EB';
+  ctx.lineWidth   = 1;
+  [0, 0.5, 1].forEach(t => {
+    const y = pad.top + chartH * (1 - t);
+    ctx.beginPath();
+    ctx.moveTo(pad.left, y);
+    ctx.lineTo(pad.left + chartW, y);
+    ctx.stroke();
+  });
+
+  // Área rellena
+  ctx.beginPath();
+  entries.forEach(([, v], i) => {
+    const x = pad.left + i * xStep;
+    const y = pad.top  + chartH * (1 - v / maxVal);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.lineTo(pad.left + (entries.length - 1) * xStep, pad.top + chartH);
+  ctx.lineTo(pad.left, pad.top + chartH);
+  ctx.closePath();
+  const grad = ctx.createLinearGradient(0, pad.top, 0, pad.top + chartH);
+  grad.addColorStop(0,   'rgba(59,123,248,.25)');
+  grad.addColorStop(1,   'rgba(59,123,248,.02)');
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Línea principal
+  ctx.beginPath();
+  ctx.strokeStyle = '#3B7BF8';
+  ctx.lineWidth   = 2.5;
+  ctx.lineJoin    = 'round';
+  ctx.lineCap     = 'round';
+  entries.forEach(([, v], i) => {
+    const x = pad.left + i * xStep;
+    const y = pad.top  + chartH * (1 - v / maxVal);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  // Puntos
+  entries.forEach(([, v], i) => {
+    const x = pad.left + i * xStep;
+    const y = pad.top  + chartH * (1 - v / maxVal);
+    ctx.beginPath();
+    ctx.arc(x, y, 4, 0, Math.PI * 2);
+    ctx.fillStyle   = '#3B7BF8';
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth   = 2;
+    ctx.stroke();
+  });
+
+  // Etiquetas del eje X (cada N días si hay muchos)
+  ctx.fillStyle = '#9CA3AF';
+  ctx.font      = '11px DM Sans, sans-serif';
+  ctx.textAlign = 'center';
+  const step = Math.ceil(entries.length / 7);
+  entries.forEach(([date], i) => {
+    if (i % step !== 0 && i !== entries.length - 1) return;
+    const x = pad.left + i * xStep;
+    const d = new Date(date + 'T12:00:00');
+    const label = d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+    ctx.fillText(label, x, H - 6);
+  });
+}
+
+// ── TABLA ─────────────────────────────────────
+
+function renderTable() {
+  const tbody = document.getElementById('appointments-tbody');
+  if (!tbody) return;
+
+  const appointments = adminState.appointments.slice(0, 20);
+
+  if (appointments.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="7" style="text-align:center;padding:2rem;color:var(--text3)">
+          No hay agendamientos registrados todavía.
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = appointments.map(apt => {
+    const tier       = detectTier(apt);
+    const tierConfig = CONFIG.TIERS[tier];
+    const tierLabel  = tierConfig?.label || tier;
+    const tierBadge  = tier === 'vip' ? 'badge-blue' : 'badge-gray';
+
+    const dateKey  = getAppointmentDate(apt);
+    const dateStr  = dateKey
+      ? new Date(dateKey + 'T12:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: '2-digit' })
+      : '—';
+
+    const rawTime  = apt.startTime || apt.start || '';
+    const timeStr  = rawTime
+      ? new Date(rawTime).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', timeZone: CONFIG.TIMEZONE })
+      : '—';
+
+    const name  = apt.title || `${apt.firstName || ''} ${apt.lastName || ''}`.trim() || '—';
+    const email = apt.email || '—';
+    const inv   = apt.inversion || apt.customFields?.find(f => f.id === CONFIG.GHL_CUSTOM_FIELD_INVERSION)?.value || '—';
+
+    const statusBadge = apt.status === 'confirmado' || apt.status === 'booked'
+      ? 'badge-green'
+      : 'badge-amber';
+
+    const statusLabel = apt.status === 'confirmado' || apt.status === 'booked'
+      ? 'Confirmado'
+      : (apt.status || '—');
+
+    return `
+      <tr>
+        <td class="td-name">${escapeHtml(name)}</td>
+        <td class="td-email">${escapeHtml(email)}</td>
+        <td>${escapeHtml(inv)}</td>
+        <td><span class="badge ${tierBadge}">${tierLabel}</span></td>
+        <td>${dateStr}</td>
+        <td>${timeStr}</td>
+        <td><span class="badge ${statusBadge}">${statusLabel}</span></td>
+      </tr>
+    `;
+  }).join('');
+}
+
+// ── SECCIÓN CONFIG ────────────────────────────
+
+function renderConfigSection() {
+  const el = document.getElementById('config-info');
+  if (!el) return;
+
+  el.innerHTML = `
+    <div class="card p-6" style="margin-bottom:1rem">
+      <h3 style="font-family:'Syne',sans-serif;font-weight:700;margin-bottom:1rem">Estado de la configuración</h3>
+      <div style="display:flex;flex-direction:column;gap:.625rem">
+        ${configRow('Backend proxy',   true, 'Activo — credenciales protegidas en servidor')}
+        ${configRow('Lanzamiento',     true, CONFIG.LAUNCH_NAME)}
+        ${configRow('Timezone',        true, CONFIG.TIMEZONE)}
+      </div>
+    </div>
+    <div class="card p-6">
+      <h3 style="font-family:'Syne',sans-serif;font-weight:700;margin-bottom:1rem">Semanas del lanzamiento</h3>
+      ${Object.entries(CONFIG.TIERS).map(([key, t]) => `
+        <div style="margin-bottom:1rem">
+          <p style="font-weight:700;margin-bottom:.375rem">${t.label} (${key})</p>
+          ${t.semanas.map(s => `
+            <div style="font-size:.875rem;color:var(--text2);margin-bottom:.25rem">
+              📅 ${s.start} → ${s.end}
+            </div>
+          `).join('')}
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function configRow(label, ok, note = '') {
+  const icon = ok ? '✅' : '❌';
+  const noteHtml = note ? ` <span style="color:var(--text3);font-size:.8125rem">(${escapeHtml(note)})</span>` : '';
+  return `
+    <div style="display:flex;align-items:center;gap:.625rem;font-size:.9rem">
+      <span>${icon}</span>
+      <span style="font-weight:600">${escapeHtml(label)}</span>${noteHtml}
+    </div>
+  `;
+}
+
+// ── REFRESH ───────────────────────────────────
+
+async function refreshData() {
+  const btn = document.getElementById('btn-refresh');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = `<div class="spinner" style="width:16px;height:16px;border-top-color:var(--blue);border-color:rgba(59,123,248,.2)"></div> Actualizando…`;
+  }
+
+  await loadData();
+
+  if (btn) {
+    btn.disabled = false;
+    btn.innerHTML = '🔄 Actualizar';
+  }
+}
+
+// ── HELPERS ───────────────────────────────────
+
+function escapeHtml(str) {
+  return String(str || '')
+    .replace(/&/g,  '&amp;')
+    .replace(/</g,  '&lt;')
+    .replace(/>/g,  '&gt;')
+    .replace(/"/g,  '&quot;')
+    .replace(/'/g,  '&#039;');
+}

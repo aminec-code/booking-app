@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reserva tu auditoría</title>
+  <meta name="description" content="Reserva tu sesión de auditoría gratuita.">
+  <meta name="robots" content="noindex, nofollow">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="styles.css">
+
+  <style>
+    .app-wrapper {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem 1rem 4rem;
+      background: var(--bg);
+    }
+
+    .app-header {
+      width: 100%;
+      max-width: 580px;
+      margin-bottom: 1.5rem;
+    }
+
+    .app-logo {
+      display: flex;
+      align-items: center;
+      gap: .625rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .app-logo-icon {
+      width: 36px;
+      height: 36px;
+      background: var(--blue);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+    }
+
+    .app-logo-text {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 1.0625rem;
+      color: var(--text);
+    }
+
+    .app-card {
+      width: 100%;
+      max-width: 580px;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+      padding: 2rem;
+    }
+
+    /* ── Steps ── */
+    .steps-4 {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .step-dot-4 {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      font-size: .75rem;
+      font-weight: 700;
+      border: 2px solid var(--border);
+      color: var(--text3);
+      background: #fff;
+      transition: all .2s ease;
+      position: relative;
+      z-index: 1;
+      flex-shrink: 0;
+    }
+
+    .step-dot-4.active {
+      border-color: var(--blue);
+      background: var(--blue);
+      color: #fff;
+      box-shadow: 0 0 0 4px rgba(59,123,248,.15);
+    }
+
+    .step-dot-4.done {
+      border-color: var(--green);
+      background: var(--green);
+      color: #fff;
+    }
+
+    .step-line-4 {
+      height: 2px;
+      width: 40px;
+      background: var(--border);
+      transition: background .2s ease;
+    }
+
+    .step-line-4.done {
+      background: var(--green);
+    }
+
+    /* ── Block progress bar ── */
+    .block-progress {
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .block-progress-bar {
+      flex: 1;
+      height: 4px;
+      background: var(--border);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .block-progress-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: var(--blue);
+      transition: width .4s ease;
+    }
+
+    .block-progress-label {
+      font-size: .75rem;
+      font-weight: 600;
+      color: var(--text3);
+      white-space: nowrap;
+    }
+
+    /* ── Step header ── */
+    .step-header {
+      margin-bottom: 1.75rem;
+    }
+
+    .step-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: .375rem;
+      font-size: .75rem;
+      font-weight: 700;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: var(--blue);
+      background: var(--blue-light);
+      padding: .25rem .625rem;
+      border-radius: 999px;
+      margin-bottom: .75rem;
+    }
+
+    .step-header h1 {
+      font-size: 1.375rem;
+      margin-bottom: .375rem;
+    }
+
+    .step-header p {
+      font-size: .9rem;
+      color: var(--text2);
+    }
+
+    /* ── Radio group ── */
+    .radio-group, .check-group {
+      display: flex;
+      flex-direction: column;
+      gap: .5rem;
+    }
+
+    .radio-option, .check-option {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      padding: .75rem 1rem;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all .15s ease;
+      user-select: none;
+    }
+
+    .radio-option:hover, .check-option:hover {
+      border-color: var(--blue);
+      background: var(--blue-light);
+    }
+
+    .radio-option.selected, .check-option.selected {
+      border-color: var(--blue);
+      background: var(--blue-light);
+    }
+
+    .radio-option input[type="radio"],
+    .check-option input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--blue);
+      flex-shrink: 0;
+    }
+
+    .radio-option span, .check-option span {
+      font-size: .9375rem;
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    /* ── Hint text ── */
+    .field-hint {
+      font-size: .8rem;
+      color: var(--text3);
+      margin-top: .25rem;
+    }
+
+    /* ── Animate between blocks ── */
+    .block-enter {
+      animation: blockIn .25s ease both;
+    }
+
+    @keyframes blockIn {
+      from { opacity: 0; transform: translateX(18px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+
+    @media (max-width: 480px) {
+      .app-card { padding: 1.25rem; border-radius: var(--radius); }
+      .app-wrapper { padding: 1rem .75rem 3rem; }
+      .step-line-4 { width: 28px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="app-wrapper">
+
+  <!-- Logo -->
+  <header class="app-header">
+    <div class="app-logo">
+      <div class="app-logo-icon">📅</div>
+      <span class="app-logo-text" id="launch-name-header">Reserva tu auditoría</span>
+    </div>
+
+    <!-- 4 step dots -->
+    <div class="steps-4">
+      <div class="step-dot-4 active" id="dot4-1">1</div>
+      <div class="step-line-4" id="line4-1"></div>
+      <div class="step-dot-4" id="dot4-2">2</div>
+      <div class="step-line-4" id="line4-2"></div>
+      <div class="step-dot-4" id="dot4-3">3</div>
+      <div class="step-line-4" id="line4-3"></div>
+      <div class="step-dot-4" id="dot4-4">✓</div>
+    </div>
+  </header>
+
+  <!-- ══════════════════════════════════════
+       BLOQUE 1 — Datos personales + negocio
+  ══════════════════════════════════════ -->
+  <main class="app-card" id="step-1">
+
+    <div class="step-header">
+      <div class="step-tag">📋 Bloque 1 de 2</div>
+      <h1>Sobre ti y tu negocio</h1>
+      <p>Cuéntanos un poco para preparar tu auditoría.</p>
+    </div>
+
+    <div class="block-progress" style="margin-top:-.5rem">
+      <div class="block-progress-bar">
+        <div class="block-progress-fill" id="b1-progress" style="width:0%"></div>
+      </div>
+      <span class="block-progress-label" id="b1-progress-label">0 / 9</span>
+    </div>
+
+    <form id="booking-form" novalidate autocomplete="off">
+
+      <!-- Nombre + Apellidos -->
+      <div class="grid-2" style="margin-bottom:1rem">
+        <div class="form-group">
+          <label class="form-label" for="nombre">Nombre *</label>
+          <input class="form-input" type="text" id="nombre" placeholder="Ana" autocomplete="given-name" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="apellidos">Apellidos *</label>
+          <input class="form-input" type="text" id="apellidos" placeholder="García López" autocomplete="family-name" required>
+        </div>
+      </div>
+
+      <!-- Teléfono -->
+      <div class="form-group" style="margin-bottom:1rem">
+        <label class="form-label" for="telefono">Teléfono *</label>
+        <div style="display:flex;gap:.5rem">
+          <div class="form-select-wrapper" style="width:110px;flex-shrink:0">
+            <select class="form-select" id="telefono-prefix" style="padding-right:1.75rem">
+              <option value="+34">🇪🇸 +34</option>
+              <option value="+52">🇲🇽 +52</option>
+              <option value="+54">🇦🇷 +54</option>
+              <option value="+57">🇨🇴 +57</option>
+              <option value="+51">🇵🇪 +51</option>
+              <option value="+56">🇨🇱 +56</option>
+              <option value="+1">🇺🇸 +1</option>
+              <option value="+44">🇬🇧 +44</option>
+            </select>
+          </div>
+          <input class="form-input" type="tel" id="telefono" placeholder="600 000 000" autocomplete="tel" required style="flex:1">
+        </div>
+        <span class="form-error" id="telefono-error"></span>
+      </div>
+
+      <!-- Email -->
+      <div class="form-group" style="margin-bottom:1rem">
+        <label class="form-label" for="email">Email *</label>
+        <input class="form-input" type="email" id="email" placeholder="ana@empresa.com" autocomplete="email" required>
+        <span class="form-error" id="email-error"></span>
+      </div>
+
+      <!-- ¿A qué te dedicas? -->
+      <div class="form-group" style="margin-bottom:1rem">
+        <label class="form-label" for="negocio">¿A qué te dedicas y qué vendes exactamente? *</label>
+        <textarea class="form-input" id="negocio" rows="3" placeholder="Ej: Tengo una academia online de inglés para adultos…" style="resize:vertical" required></textarea>
+      </div>
+
+      <!-- Ticket medio -->
+      <div class="form-group" style="margin-bottom:1rem">
+        <label class="form-label" for="ticket-medio">¿Cuál es tu ticket medio? (€/venta) *</label>
+        <input class="form-input" type="text" id="ticket-medio" placeholder="Ej: 500 €" required>
+      </div>
+
+      <!-- Margen -->
+      <div class="form-group" style="margin-bottom:1rem">
+        <label class="form-label" for="margen">¿Margen aproximado por venta? *</label>
+        <input class="form-input" type="text" id="margen" placeholder="Alto / Medio / Bajo" required>
+        <p class="field-hint">Alto / medio / bajo</p>
+      </div>
+
+      <!-- Facturación anual -->
+      <div class="form-group" style="margin-bottom:1rem">
+        <label class="form-label" for="facturacion">¿Cuál es tu facturación anual aproximada? *</label>
+        <input class="form-input" type="text" id="facturacion" placeholder="Ej: 80.000 €" required>
+        <p class="field-hint">Número exacto o aproximado</p>
+      </div>
+
+      <!-- Inversión (tier oculto) -->
+      <div class="form-group" style="margin-bottom:1.5rem">
+        <label class="form-label">¿Cuánto podrías invertir al mes si fuera rentable la estrategia de marketing? *</label>
+        <div class="radio-group" id="inversion-group">
+          <label class="radio-option">
+            <input type="radio" name="inversion" value="0-300"> <span>0 – 300 €</span>
+          </label>
+          <label class="radio-option">
+            <input type="radio" name="inversion" value="300-1000"> <span>300 € – 1.000 €</span>
+          </label>
+          <label class="radio-option">
+            <input type="radio" name="inversion" value="1000-3000"> <span>1.000 € – 3.000 €</span>
+          </label>
+          <label class="radio-option">
+            <input type="radio" name="inversion" value="+3000"> <span>+ 3.000 €</span>
+          </label>
+        </div>
+      </div>
+
+      <button type="button" id="btn-block1" class="btn btn-primary btn-full btn-lg" disabled>
+        Siguiente →
+      </button>
+
+    </form>
+  </main>
+
+  <!-- ══════════════════════════════════════
+       BLOQUE 2 — Situación actual
+  ══════════════════════════════════════ -->
+  <main class="app-card hidden" id="step-block2">
+
+    <div class="step-header">
+      <div class="step-tag">📊 Bloque 2 de 2</div>
+      <h1>Tu situación actual</h1>
+      <p>Últimas preguntas para conocer dónde estás ahora.</p>
+    </div>
+
+    <div class="block-progress" style="margin-top:-.5rem">
+      <div class="block-progress-bar">
+        <div class="block-progress-fill" id="b2-progress" style="width:0%"></div>
+      </div>
+      <span class="block-progress-label" id="b2-progress-label">0 / 8</span>
+    </div>
+
+    <!-- Clientes te llegan por -->
+    <div class="form-group" style="margin-bottom:1.25rem">
+      <label class="form-label">Hoy los clientes te llegan por: * <span style="font-weight:400;color:var(--text3)">(elige 1–2)</span></label>
+      <div class="check-group" id="clientes-llegan-group">
+        <label class="check-option"><input type="checkbox" name="clientes" value="Recomendación"> <span>Recomendación</span></label>
+        <label class="check-option"><input type="checkbox" name="clientes" value="Instagram"> <span>Instagram</span></label>
+        <label class="check-option"><input type="checkbox" name="clientes" value="WhatsApp"> <span>WhatsApp</span></label>
+        <label class="check-option"><input type="checkbox" name="clientes" value="Google"> <span>Google</span></label>
+        <label class="check-option"><input type="checkbox" name="clientes" value="Ads"> <span>Ads</span></label>
+        <label class="check-option"><input type="checkbox" name="clientes" value="Prospección"> <span>Prospección</span></label>
+        <label class="check-option"><input type="checkbox" name="clientes" value="Otro"> <span>Otro</span></label>
+      </div>
+    </div>
+
+    <!-- Lo que más te frena -->
+    <div class="form-group" style="margin-bottom:1.25rem">
+      <label class="form-label">Ahora mismo lo que más te frena es: *</label>
+      <div class="radio-group" id="frena-group">
+        <label class="radio-option"><input type="radio" name="frena" value="No tengo leads"> <span>No tengo leads</span></label>
+        <label class="radio-option"><input type="radio" name="frena" value="Tengo leads pero no cierro"> <span>Tengo leads pero no cierro</span></label>
+        <label class="radio-option"><input type="radio" name="frena" value="No convierto en la web/DM"> <span>No convierto en la web/DM</span></label>
+        <label class="radio-option"><input type="radio" name="frena" value="No sé qué contenido hacer"> <span>No sé qué contenido hacer</span></label>
+        <label class="radio-option"><input type="radio" name="frena" value="No tengo tiempo/equipo"> <span>No tengo tiempo/equipo</span></label>
+        <label class="radio-option" id="frena-otro-option">
+          <input type="radio" name="frena" value="__otro__"> <span>Otro</span>
+        </label>
+      </div>
+      <input class="form-input hidden" type="text" id="frena-otro-input" placeholder="Cuéntanos cuál es…" style="margin-top:.5rem">
+    </div>
+
+    <!-- Instagram -->
+    <div class="form-group" style="margin-bottom:1.25rem">
+      <label class="form-label" for="instagram">Indícanos el Instagram de la empresa: *</label>
+      <div style="display:flex;align-items:center;gap:.5rem">
+        <span style="font-weight:700;color:var(--text2);font-size:1.1rem;padding:.7rem .5rem .7rem 1rem;border:1.5px solid var(--border);border-right:none;border-radius:var(--radius-sm) 0 0 var(--radius-sm);background:#fff">@</span>
+        <input class="form-input" type="text" id="instagram" placeholder="tuempresa" style="border-radius:0 var(--radius-sm) var(--radius-sm) 0;border-left:none" required>
+      </div>
+    </div>
+
+    <!-- Publicas en redes -->
+    <div class="form-group" style="margin-bottom:1.25rem">
+      <label class="form-label">¿Publicas en redes sociales? *</label>
+      <div class="radio-group" id="publica-group">
+        <label class="radio-option"><input type="radio" name="publica" value="Diario"> <span>Diario</span></label>
+        <label class="radio-option"><input type="radio" name="publica" value="3-5/sem"> <span>3–5 veces por semana</span></label>
+        <label class="radio-option"><input type="radio" name="publica" value="1-2/sem"> <span>1–2 veces por semana</span></label>
+        <label class="radio-option"><input type="radio" name="publica" value="Casi nunca"> <span>Casi nunca</span></label>
+      </div>
+    </div>
+
+    <!-- Cómo cierras ventas -->
+    <div class="form-group" style="margin-bottom:1.25rem">
+      <label class="form-label">¿Cómo cierras ventas hoy? *</label>
+      <div class="radio-group" id="cierra-group">
+        <label class="radio-option"><input type="radio" name="cierra" value="WhatsApp/DM"> <span>WhatsApp / DM</span></label>
+        <label class="radio-option"><input type="radio" name="cierra" value="Llamada"> <span>Llamada</span></label>
+        <label class="radio-option"><input type="radio" name="cierra" value="Presencial"> <span>Presencial</span></label>
+      </div>
+    </div>
+
+    <!-- Sistema de seguimiento -->
+    <div class="form-group" style="margin-bottom:1.25rem">
+      <label class="form-label">¿Tienes un sistema de seguimiento de clientes? *</label>
+      <div class="radio-group" id="sistema-group">
+        <label class="radio-option"><input type="radio" name="sistema" value="Sí"> <span>Sí</span></label>
+        <label class="radio-option"><input type="radio" name="sistema" value="No"> <span>No</span></label>
+      </div>
+    </div>
+
+    <!-- Tiempo para empezar -->
+    <div class="form-group" style="margin-bottom:1.25rem">
+      <label class="form-label">Si te encaja el plan de trabajo, ¿en cuánto tiempo podrías empezar? *</label>
+      <div class="radio-group" id="tiempo-group">
+        <label class="radio-option"><input type="radio" name="tiempo" value="Esta semana"> <span>Esta semana</span></label>
+        <label class="radio-option"><input type="radio" name="tiempo" value="7-14 días"> <span>7–14 días</span></label>
+        <label class="radio-option"><input type="radio" name="tiempo" value="Este mes"> <span>Este mes</span></label>
+      </div>
+    </div>
+
+    <!-- Decisor -->
+    <div class="form-group" style="margin-bottom:1.5rem">
+      <label class="form-label">¿Eres la persona que decide dentro de tu empresa o hay otros? *</label>
+      <div class="radio-group" id="decisor-group">
+        <label class="radio-option"><input type="radio" name="decisor" value="Sí, soy yo"> <span>Sí, soy yo</span></label>
+        <label class="radio-option"><input type="radio" name="decisor" value="No, hay más gente"> <span>No, hay más gente</span></label>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:.75rem">
+      <button type="button" id="btn-back-b2" class="btn btn-ghost" style="flex:0 0 auto">← Volver</button>
+      <button type="button" id="btn-block2" class="btn btn-primary btn-lg" style="flex:1" disabled>
+        Ver disponibilidad →
+      </button>
+    </div>
+
+  </main>
+
+  <!-- ══════════════════════════════════════
+       PASO 3 — CALENDARIO
+  ══════════════════════════════════════ -->
+  <main class="app-card hidden" id="step-2">
+    <div class="step-header">
+      <div class="step-tag">📅 Paso 3 de 4</div>
+      <h1>Elige tu horario</h1>
+      <p>Selecciona el día y la hora que mejor te venga.</p>
+    </div>
+
+    <div>
+      <div class="cal-nav">
+        <button class="cal-nav-btn" id="cal-prev" aria-label="Mes anterior">&#8249;</button>
+        <span class="cal-month-label" id="cal-month-label"></span>
+        <button class="cal-nav-btn" id="cal-next" aria-label="Mes siguiente">&#8250;</button>
+      </div>
+      <div class="cal-grid" id="cal-grid"></div>
+    </div>
+
+    <div id="slots-container" class="hidden slots-section"></div>
+
+    <div style="display:flex;gap:.75rem;margin-top:1.75rem;flex-wrap:wrap">
+      <button type="button" id="btn-back" class="btn btn-ghost" style="flex:0 0 auto">← Volver</button>
+      <button type="button" id="btn-confirm" class="btn btn-primary btn-lg" style="flex:1" disabled>
+        Confirmar reserva →
+      </button>
+    </div>
+  </main>
+
+  <!-- ══════════════════════════════════════
+       PASO 4 — CONFIRMACIÓN
+  ══════════════════════════════════════ -->
+  <main class="app-card hidden" id="step-3">
+    <!-- Renderizado por booking.js -->
+  </main>
+
+  <footer style="margin-top:2rem;font-size:.8rem;color:var(--text3);text-align:center">
+    Tus datos están seguros y solo se usarán para gestionar tu cita.
+  </footer>
+
+</div>
+
+<script src="config.js"></script>
+<script src="ghl.js"></script>
+<script src="calendar.js"></script>
+<script src="booking.js"></script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('launch-name-header');
+    if (el && CONFIG.LAUNCH_NAME) el.textContent = CONFIG.LAUNCH_NAME;
+    trackFormStart();
+  });
+</script>
+
+</body>
+</html>

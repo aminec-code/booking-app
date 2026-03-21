@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin — Dashboard</title>
+  <meta name="robots" content="noindex, nofollow">
+
+  <!-- Fuentes Google -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="styles.css">
+
+  <style>
+    /* ── Ajustes específicos del admin ── */
+    .section-title {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 1.125rem;
+      color: var(--text);
+      margin-bottom: 1rem;
+    }
+
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+    }
+
+    .data-source-badge {
+      font-size: .75rem;
+      font-weight: 600;
+      padding: .25rem .625rem;
+      border-radius: 999px;
+      background: var(--green-light);
+      color: #065F46;
+    }
+
+    canvas {
+      display: block;
+      width: 100% !important;
+    }
+
+    /* Mobile sidebar toggle */
+    .sidebar-mobile-btn {
+      display: none;
+      align-items: center;
+      gap: .5rem;
+      padding: .5rem .75rem;
+      border-radius: var(--radius-sm);
+      background: var(--blue-light);
+      color: var(--blue);
+      font-size: .875rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+    }
+
+    @media (max-width: 768px) {
+      .sidebar-mobile-btn { display: flex; }
+      .metrics-grid { grid-template-columns: 1fr 1fr !important; }
+      .charts-grid  { grid-template-columns: 1fr !important; }
+    }
+
+    @media (max-width: 480px) {
+      .metrics-grid { grid-template-columns: 1fr !important; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════
+     LOGIN SCREEN
+════════════════════════════════════════════ -->
+<div id="login-screen" class="admin-login">
+  <div class="login-card">
+    <div class="login-icon">🔐</div>
+    <h1 class="login-title">Dashboard Admin</h1>
+    <p class="login-sub">Introduce la contraseña para acceder al panel de métricas.</p>
+
+    <form id="login-form" novalidate>
+      <div class="form-group" style="text-align:left;margin-bottom:1rem">
+        <label class="form-label" for="login-password">Contraseña</label>
+        <input
+          class="form-input"
+          type="password"
+          id="login-password"
+          placeholder="••••••••"
+          autocomplete="current-password"
+          autofocus
+          required
+        >
+        <div class="login-error" id="login-error"></div>
+      </div>
+      <button type="submit" class="btn btn-primary btn-full">Entrar</button>
+    </form>
+
+    <p style="margin-top:1.5rem;font-size:.8rem;color:var(--text3)">
+      ¿No tienes contraseña? Consúltala en <code>config.js → ADMIN_PASSWORD</code>
+    </p>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     DASHBOARD SCREEN
+════════════════════════════════════════════ -->
+<div id="dashboard-screen" class="admin-layout hidden">
+
+  <!-- ── SIDEBAR ──────────────────────────── -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">
+        <div class="logo-icon">📅</div>
+        <div class="logo-text">
+          Booking Admin
+          <div class="logo-sub" id="launch-name">Dashboard</div>
+        </div>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Menú</div>
+
+      <div class="nav-item active" data-section="resumen">
+        <span class="nav-icon">📊</span>
+        <span>Resumen</span>
+      </div>
+
+      <div class="nav-item" data-section="agendamientos">
+        <span class="nav-icon">📋</span>
+        <span>Agendamientos</span>
+      </div>
+
+      <div class="nav-item" data-section="graficos">
+        <span class="nav-icon">📈</span>
+        <span>Gráficos</span>
+      </div>
+
+      <div class="nav-item" data-section="config">
+        <span class="nav-icon">⚙️</span>
+        <span>Configuración</span>
+      </div>
+    </nav>
+
+    <div class="sidebar-footer">
+      <a href="index.html" target="_blank" class="btn btn-secondary btn-full btn-sm" style="margin-bottom:.75rem">
+        🔗 Ver página de reserva
+      </a>
+      <button class="btn btn-ghost btn-full btn-sm" onclick="logout()">
+        Cerrar sesión
+      </button>
+    </div>
+  </aside>
+
+  <!-- ── MAIN ─────────────────────────────── -->
+  <main class="admin-main">
+
+    <!-- Topbar -->
+    <div class="admin-topbar">
+      <div>
+        <h1 class="admin-title">Dashboard</h1>
+        <p class="admin-subtitle" id="admin-subtitle">Métricas en tiempo real del lanzamiento</p>
+      </div>
+      <div class="topbar-actions">
+        <div id="loading-indicator" class="hidden">
+          <div class="spinner spinner-blue" style="width:20px;height:20px"></div>
+        </div>
+        <button id="btn-refresh" class="btn btn-ghost btn-sm" onclick="refreshData()">
+          🔄 Actualizar
+        </button>
+      </div>
+    </div>
+
+    <!-- ═══════════════════ SECCIÓN: RESUMEN ════════════════════ -->
+    <section class="admin-section" data-section="resumen">
+
+      <!-- Métricas -->
+      <div class="metrics-grid" id="metrics-grid">
+
+        <div class="metric-card" id="metric-total">
+          <div class="metric-label">Total agendados</div>
+          <div class="metric-value">—</div>
+          <div class="metric-sub">todas las semanas</div>
+        </div>
+
+        <div class="metric-card" id="metric-vip">
+          <div class="metric-label">Tier Prioritario</div>
+          <div class="metric-value">—</div>
+          <div class="metric-sub"></div>
+          <span class="badge badge-blue" id="metric-vip-badge" style="margin-top:.5rem">VIP</span>
+        </div>
+
+        <div class="metric-card" id="metric-basic">
+          <div class="metric-label">Tier Estándar</div>
+          <div class="metric-value">—</div>
+          <div class="metric-sub"></div>
+          <span class="badge badge-gray" id="metric-basic-badge" style="margin-top:.5rem">Básico</span>
+        </div>
+
+        <div class="metric-card" id="metric-rate">
+          <div class="metric-label">Tasa de completado</div>
+          <div class="metric-value">—</div>
+          <div class="metric-sub">form iniciados vs confirmados</div>
+        </div>
+
+      </div>
+
+      <!-- Quick charts en resumen -->
+      <div class="charts-grid">
+
+        <!-- Donut -->
+        <div class="chart-card">
+          <div class="chart-title">Distribución por tier</div>
+          <div class="donut-wrapper">
+            <div class="donut-svg-wrap">
+              <svg id="donut-svg" viewBox="0 0 130 130" width="130" height="130"></svg>
+              <div class="donut-center" id="donut-center">
+                <div class="donut-total">0</div>
+                <div class="donut-total-label">total</div>
+              </div>
+            </div>
+            <div class="donut-legend">
+              <div class="legend-item" id="legend-vip">
+                <div class="legend-dot" style="background:var(--blue)"></div>
+                <span class="legend-label">Prioritario</span>
+                <span class="legend-val">0</span>
+              </div>
+              <div class="legend-item" id="legend-basic">
+                <div class="legend-dot" style="background:var(--amber)"></div>
+                <span class="legend-label">Estándar</span>
+                <span class="legend-val">0</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Barras por semana -->
+        <div class="chart-card">
+          <div class="chart-title">Agendamientos por semana</div>
+          <div class="bar-chart">
+
+            <div class="bar-row">
+              <span class="bar-label">S1</span>
+              <div class="bar-track">
+                <div class="bar-fill vip" id="bar-fill-s1" style="width:0%"></div>
+              </div>
+              <span class="bar-val" id="bar-count-s1">0</span>
+            </div>
+
+            <div class="bar-row">
+              <span class="bar-label">S2</span>
+              <div class="bar-track">
+                <div class="bar-fill vip" id="bar-fill-s2" style="width:0%"></div>
+              </div>
+              <span class="bar-val" id="bar-count-s2">0</span>
+            </div>
+
+            <div class="bar-row">
+              <span class="bar-label">S3</span>
+              <div class="bar-track">
+                <div class="bar-fill basic" id="bar-fill-s3" style="width:0%"></div>
+              </div>
+              <span class="bar-val" id="bar-count-s3">0</span>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Línea temporal (ocupa 2 columnas) -->
+        <div class="chart-card chart-full">
+          <div class="chart-title">Agendamientos por día</div>
+          <div class="line-chart-container">
+            <canvas id="line-chart" height="160"></canvas>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- ═══════════════════ SECCIÓN: AGENDAMIENTOS ══════════════ -->
+    <section class="admin-section hidden" data-section="agendamientos">
+
+      <div class="table-card">
+        <div class="table-header">
+          <span class="table-header-title">Últimos 20 agendamientos</span>
+          <button class="btn btn-ghost btn-sm" onclick="refreshData()">🔄 Refrescar</button>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Email</th>
+                <th>Inversión</th>
+                <th>Tier</th>
+                <th>Fecha cita</th>
+                <th>Hora</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody id="appointments-tbody">
+              <tr>
+                <td colspan="7" style="text-align:center;padding:2rem;color:var(--text3)">
+                  Cargando datos…
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ═══════════════════ SECCIÓN: GRÁFICOS ═══════════════════ -->
+    <section class="admin-section hidden" data-section="graficos">
+
+      <div class="charts-grid">
+
+        <div class="chart-card">
+          <div class="chart-title">Distribución por tier</div>
+          <div class="donut-wrapper">
+            <div class="donut-svg-wrap">
+              <svg id="donut-svg-2" viewBox="0 0 130 130" width="130" height="130"></svg>
+              <div class="donut-center" id="donut-center-2">
+                <div class="donut-total">0</div>
+                <div class="donut-total-label">total</div>
+              </div>
+            </div>
+            <div class="donut-legend">
+              <div class="legend-item" id="legend-vip-2">
+                <div class="legend-dot" style="background:var(--blue)"></div>
+                <span class="legend-label">Prioritario</span>
+                <span class="legend-val">0</span>
+              </div>
+              <div class="legend-item" id="legend-basic-2">
+                <div class="legend-dot" style="background:var(--amber)"></div>
+                <span class="legend-label">Estándar</span>
+                <span class="legend-val">0</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-title">Por semana</div>
+          <div class="bar-chart">
+            <div class="bar-row">
+              <span class="bar-label">S1</span>
+              <div class="bar-track">
+                <div class="bar-fill vip" id="bar-fill-s1-2" style="width:0%"></div>
+              </div>
+              <span class="bar-val" id="bar-count-s1-2">0</span>
+            </div>
+            <div class="bar-row">
+              <span class="bar-label">S2</span>
+              <div class="bar-track">
+                <div class="bar-fill vip" id="bar-fill-s2-2" style="width:0%"></div>
+              </div>
+              <span class="bar-val" id="bar-count-s2-2">0</span>
+            </div>
+            <div class="bar-row">
+              <span class="bar-label">S3</span>
+              <div class="bar-track">
+                <div class="bar-fill basic" id="bar-fill-s3-2" style="width:0%"></div>
+              </div>
+              <span class="bar-val" id="bar-count-s3-2">0</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="chart-card chart-full">
+          <div class="chart-title">Evolución diaria</div>
+          <div class="line-chart-container">
+            <canvas id="line-chart-2" height="200"></canvas>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- ═══════════════════ SECCIÓN: CONFIG ═════════════════════ -->
+    <section class="admin-section hidden" data-section="config">
+      <div id="config-info">
+        <!-- Renderizado por admin.js → renderConfigSection() -->
+        <div style="color:var(--text3);padding:2rem;text-align:center">Cargando…</div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- Scripts -->
+<script src="config.js"></script>
+<script src="ghl.js"></script>
+<script src="admin.js"></script>
+
+<script>
+  // ── Sincronizar gráficos duplicados en la sección "Gráficos" ──
+  // Sobreescribimos renderCharts para también pintar los canvas secundarios
+  const _origRenderCharts = renderCharts;
+  renderCharts = function() {
+    _origRenderCharts();
+
+    // Clonar donut en sección gráficos
+    const svg1 = document.getElementById('donut-svg');
+    const svg2 = document.getElementById('donut-svg-2');
+    if (svg1 && svg2) svg2.innerHTML = svg1.innerHTML;
+
+    const c1 = document.getElementById('donut-center');
+    const c2 = document.getElementById('donut-center-2');
+    if (c1 && c2) c2.innerHTML = c1.innerHTML;
+
+    const lv1 = document.getElementById('legend-vip');
+    const lv2 = document.getElementById('legend-vip-2');
+    if (lv1 && lv2) lv2.innerHTML = lv1.innerHTML;
+
+    const lb1 = document.getElementById('legend-basic');
+    const lb2 = document.getElementById('legend-basic-2');
+    if (lb1 && lb2) lb2.innerHTML = lb1.innerHTML;
+
+    // Clonar barras
+    ['s1','s2','s3'].forEach(s => {
+      const f1 = document.getElementById(`bar-fill-${s}`);
+      const f2 = document.getElementById(`bar-fill-${s}-2`);
+      const c1 = document.getElementById(`bar-count-${s}`);
+      const c2 = document.getElementById(`bar-count-${s}-2`);
+      if (f1 && f2) f2.style.width = f1.style.width;
+      if (c1 && c2) c2.textContent = c1.textContent;
+    });
+
+    // Renderizar línea en sección gráficos
+    const { byDay } = analyzeAppointments(adminState.appointments);
+    setTimeout(() => {
+      const canvas2 = document.getElementById('line-chart-2');
+      if (canvas2) renderLineChartOn(canvas2, byDay);
+    }, 50);
+  };
+
+  // Función auxiliar para pintar el gráfico de línea en cualquier canvas
+  function renderLineChartOn(canvas, byDay) {
+    // Copiar lógica de renderLineChart pero con canvas específico
+    const ctx = canvas.getContext('2d');
+    const W   = canvas.offsetWidth  || 600;
+    const H   = canvas.offsetHeight || 200;
+
+    canvas.width  = W;
+    canvas.height = H;
+    ctx.clearRect(0, 0, W, H);
+
+    const entries = Object.entries(byDay).sort(([a], [b]) => a.localeCompare(b));
+    if (entries.length === 0) {
+      ctx.fillStyle = '#9CA3AF';
+      ctx.font      = '13px DM Sans, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Sin datos', W / 2, H / 2);
+      return;
+    }
+
+    const values = entries.map(([,v]) => v);
+    const maxVal = Math.max(...values, 1);
+    const pad    = { top: 16, right: 16, bottom: 32, left: 32 };
+    const chartW = W - pad.left - pad.right;
+    const chartH = H - pad.top  - pad.bottom;
+    const xStep  = entries.length > 1 ? chartW / (entries.length - 1) : chartW;
+
+    ctx.strokeStyle = '#E5E7EB';
+    ctx.lineWidth   = 1;
+    [0,.5,1].forEach(t => {
+      const y = pad.top + chartH * (1 - t);
+      ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(pad.left + chartW, y); ctx.stroke();
+    });
+
+    ctx.beginPath();
+    entries.forEach(([,v], i) => {
+      const x = pad.left + i * xStep;
+      const y = pad.top + chartH * (1 - v / maxVal);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.lineTo(pad.left + (entries.length - 1) * xStep, pad.top + chartH);
+    ctx.lineTo(pad.left, pad.top + chartH);
+    ctx.closePath();
+    const grad = ctx.createLinearGradient(0, pad.top, 0, pad.top + chartH);
+    grad.addColorStop(0, 'rgba(59,123,248,.25)');
+    grad.addColorStop(1, 'rgba(59,123,248,.02)');
+    ctx.fillStyle = grad; ctx.fill();
+
+    ctx.beginPath();
+    ctx.strokeStyle = '#3B7BF8'; ctx.lineWidth = 2.5;
+    ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    entries.forEach(([,v], i) => {
+      const x = pad.left + i * xStep;
+      const y = pad.top + chartH * (1 - v / maxVal);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+
+    entries.forEach(([,v], i) => {
+      const x = pad.left + i * xStep;
+      const y = pad.top + chartH * (1 - v / maxVal);
+      ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2);
+      ctx.fillStyle = '#3B7BF8'; ctx.fill();
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+    });
+
+    ctx.fillStyle = '#9CA3AF'; ctx.font = '11px DM Sans, sans-serif'; ctx.textAlign = 'center';
+    const step = Math.ceil(entries.length / 7);
+    entries.forEach(([date], i) => {
+      if (i % step !== 0 && i !== entries.length - 1) return;
+      const x = pad.left + i * xStep;
+      const d = new Date(date + 'T12:00:00');
+      ctx.fillText(d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }), x, H - 6);
+    });
+  }
+
+  // Volver a pintar el line-chart cuando cambia el tamaño de la ventana
+  window.addEventListener('resize', () => {
+    const canvas1 = document.getElementById('line-chart');
+    const canvas2 = document.getElementById('line-chart-2');
+    if (adminState.appointments.length > 0) {
+      const { byDay } = analyzeAppointments(adminState.appointments);
+      if (canvas1) renderLineChartOn(canvas1, byDay);
+      if (canvas2) renderLineChartOn(canvas2, byDay);
+    }
+  });
+</script>
+
+</body>
+</html>
