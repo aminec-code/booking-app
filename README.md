@@ -191,3 +191,4 @@ Sí. Edita las variables CSS en `styles.css` (colores, radios, sombras) y los te
 - Restringe el uso de la API Key por dominio si GHL lo permite.
 - Nunca expongas esta app en un repositorio público con la API Key real.
 # booking-app
+# booking-app
