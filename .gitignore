@@ -1,3 +1,8 @@
 config.js
 .env
 node_modules/
+logs/
+failed_bookings.json
+bookings_backup.json
+.DS_Store
+test/stress-report-*.json

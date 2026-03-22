@@ -165,12 +165,49 @@ const globalLimiter = rateLimit({
 app.use('/api/', globalLimiter);
 app.use('/api/', limiter);
 
+// ── STRESS TEST — array en memoria ────────────
+const stressLog = [];
+let stressLogTimer = null;
+
+if (process.env.STRESS_TEST_MODE === 'true') {
+  console.log('⚡ STRESS_TEST_MODE activo — las llamadas a GHL están simuladas');
+  stressLogTimer = setInterval(() => {
+    console.log(`[STRESS] Procesados hasta ahora: ${stressLog.length}`);
+  }, 10_000);
+}
+
 // ══════════════════════════════════════════════
 //  POST /api/booking — FLUJO COMPLETO (3 pasos)
 // ══════════════════════════════════════════════
 app.post('/api/booking', async (req, res) => {
   const { contact, opportunity, appointment, leadMeta } = req.body || {};
   const tag = `[${leadMeta?.email || '?'}]`;
+
+  // ── STRESS TEST MODE — simula GHL sin llamadas reales ──
+  if (process.env.STRESS_TEST_MODE === 'true') {
+    if (!contact?.email || !appointment?.startTime) {
+      return res.json({ success: false, errorStep: 'contact', errorCode: 400, errorMessage: 'Body inválido en stress test' });
+    }
+    const delay = 200 + Math.floor(Math.random() * 600);
+    await new Promise(r => setTimeout(r, delay));
+    const fakeId = () => Math.random().toString(36).slice(2, 10);
+    const record = {
+      email:     contact.email,
+      tier:      leadMeta?.tier,
+      fecha:     leadMeta?.fecha,
+      hora:      leadMeta?.hora,
+      ts:        Date.now(),
+      delay,
+    };
+    stressLog.push(record);
+    return res.json({
+      success:        true,
+      contactId:      `stress_c_${fakeId()}`,
+      opportunityId:  `stress_o_${fakeId()}`,
+      appointmentId:  `stress_a_${fakeId()}`,
+      assignedUserId: `stress_u_${fakeId()}`,
+    });
+  }
 
   // ── PASO 1: Contacto ────────────────────────
   let contactId;
@@ -337,7 +374,12 @@ app.post('/api/save-booking', (req, res) => {
 
 // ── GET /api/health ───────────────────────────────────────
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString(), uptime: process.uptime() });
+  res.json({
+    status:    'ok',
+    timestamp: new Date().toISOString(),
+    uptime:    process.uptime(),
+    version:   '1.2',
+  });
 });
 
 // ── POST /api/admin/login ─────────────────────────────────
