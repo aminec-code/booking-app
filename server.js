@@ -119,6 +119,12 @@ const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname)));
 
+// Ruta explícita para config.js (bypassa CDN cache)
+app.get('/config.js', (req, res) => {
+  res.setHeader('Content-Type', 'application/javascript');
+  res.sendFile(path.join(__dirname, 'config.js'));
+});
+
 const GHL     = 'https://services.leadconnectorhq.com';
 const VERSION = '2021-07-28';
 
