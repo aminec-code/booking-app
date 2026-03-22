@@ -145,11 +145,9 @@ async function ghlUpsertContact(datos) {
  * @param {string} nombre — nombre completo
  * @returns {string} opportunityId
  */
-async function ghlCreateOpportunity(contactId, tier, nombre) {
-  const tierLabel = CONFIG.TIERS[tier]?.label || tier;
-
+async function ghlCreateOpportunity(contactId, _tier, nombre) {
   const body = {
-    name:          `${nombre} — ${tierLabel} · ${CONFIG.LAUNCH_NAME}`,
+    name:          nombre,
     contactId,
     status:        'open',
     monetaryValue: 0,
@@ -202,9 +200,28 @@ async function ghlCreateAppointment(contactId, fecha, hora) {
   const data = await response.json();
   ghlLog('createAppointment response:', data);
 
-  const appointmentId = data?.id || data?.event?.id || data?.appointment?.id;
+  const appointmentId   = data?.id || data?.event?.id || data?.appointment?.id;
+  const assignedUserId  = data?.assignedUserId || data?.event?.assignedUserId || null;
   if (!appointmentId) throw new Error('No se recibió un appointmentId válido.');
-  return appointmentId;
+  return { appointmentId, assignedUserId };
+}
+
+/**
+ * Obtiene el nombre de un user/closer por su ID
+ * @param {string|null} userId
+ * @returns {Promise<string|null>}
+ */
+async function ghlGetUserName(userId) {
+  if (!userId) return null;
+  try {
+    const response = await fetch(`/api/user/${userId}`);
+    if (!response.ok) return null;
+    const data = await response.json();
+    const name = data?.name || [data?.firstName, data?.lastName].filter(Boolean).join(' ');
+    return name || null;
+  } catch (_) {
+    return null;
+  }
 }
 
 /**
@@ -261,6 +278,76 @@ async function ghlAdminLogin(password) {
     ghlWarn('Error en login:', err.message);
     return false;
   }
+}
+
+/**
+ * Flujo completo de reserva en un único endpoint
+ * Llama a POST /api/booking → contact upsert + opportunity + appointment
+ * @param {object} datos — bookingState completo
+ * @returns {{ contactId, opportunityId, appointmentId, assignedUserId }}
+ */
+async function ghlSubmitBooking(datos) {
+  const tierConfig = CONFIG.TIERS[datos.tier];
+
+  // ── Calcular ISO de inicio y fin de la cita ──
+  const [hh, mm] = datos.slotSeleccionado.split(':').map(Number);
+  const startISO = buildISOWithTimezone(datos.fechaSeleccionada, hh, mm,                         CONFIG.TIMEZONE);
+  const endISO   = buildISOWithTimezone(datos.fechaSeleccionada, hh, mm + CONFIG.SLOT_DURATION_MIN, CONFIG.TIMEZONE);
+
+  // ── Estructura que espera server.js POST /api/booking ──
+  const body = {
+    contact: {
+      email:        datos.email,
+      firstName:    datos.nombre,
+      lastName:     datos.apellidos,
+      phone:        datos.telefono,
+      tags:         [tierConfig?.tag || datos.tier],
+      customFields: buildCustomFields(datos),
+    },
+    opportunity: {
+      name: `${datos.nombre} ${datos.apellidos}`,
+    },
+    appointment: {
+      startTime:        startISO,
+      endTime:          endISO,
+      selectedTimezone: CONFIG.TIMEZONE,
+      title:            `Auditoría · ${CONFIG.LAUNCH_NAME}`,
+    },
+    leadMeta: {
+      email: datos.email,
+      tier:  datos.tier,
+      fecha: datos.fechaSeleccionada,
+      hora:  datos.slotSeleccionado,
+    },
+  };
+
+  ghlLog('submitBooking body:', body);
+
+  const response = await fetchWithRetry('/api/booking', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify(body),
+  });
+
+  const data = await response.json();
+  ghlLog('submitBooking response:', data);
+
+  if (!data?.success) {
+    const code = data?.errorStep
+      ? `${data.errorStep.toUpperCase()}_${data.errorCode || 'ERROR'}`
+      : String(response.status);
+    const msg  = data?.errorMessage || data?.error || 'Error desconocido al procesar la reserva.';
+    const err  = new Error(msg);
+    err.errorCode = code;
+    throw err;
+  }
+
+  return {
+    contactId:      data.contactId,
+    opportunityId:  data.opportunityId,
+    appointmentId:  data.appointmentId,
+    assignedUserId: data.assignedUserId,
+  };
 }
 
 // ── HELPERS ───────────────────────────────────

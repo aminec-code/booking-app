@@ -28,31 +28,40 @@ function monthName(date) {
 }
 
 /**
- * Devuelve array de fechas Date disponibles para un tier dado
+ * Devuelve los próximos 4 días hábiles disponibles para un tier dado.
+ * - Ventana rolling desde hoy (o desde la fecha mínima del tier)
  * - Excluye sábados (6) y domingos (0)
- * - Solo incluye fechas dentro de las semanas configuradas para ese tier
+ * - Respeta fechas absolutas de inicio y fin por tier
  * @param {string} tier — 'vip' | 'basico'
  * @returns {Date[]}
  */
 function getAvailableDates(tier) {
-  const tierConfig = CONFIG.TIERS[tier];
-  if (!tierConfig) return [];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  let absoluteStart, absoluteEnd;
+
+  if (tier === 'vip') {
+    absoluteStart = parseLocalDate('2026-03-24');
+    absoluteEnd   = parseLocalDate('2026-04-06');
+  } else {
+    absoluteStart = parseLocalDate('2026-04-02');
+    absoluteEnd   = parseLocalDate('2026-04-13');
+  }
+
+  // La ventana empieza desde hoy o desde el inicio absoluto del tier
+  const windowStart = today > absoluteStart ? today : absoluteStart;
 
   const available = [];
+  const cur = new Date(windowStart);
 
-  tierConfig.semanas.forEach(({ start, end }) => {
-    const startDate = parseLocalDate(start);
-    const endDate   = parseLocalDate(end);
-
-    const cur = new Date(startDate);
-    while (cur <= endDate) {
-      const dow = cur.getDay();
-      if (dow !== 0 && dow !== 6) { // excluir sábado y domingo
-        available.push(new Date(cur));
-      }
-      cur.setDate(cur.getDate() + 1);
+  while (cur <= absoluteEnd && available.length < 4) {
+    const dow = cur.getDay();
+    if (dow !== 0 && dow !== 6) { // excluir sábado y domingo
+      available.push(new Date(cur));
     }
-  });
+    cur.setDate(cur.getDate() + 1);
+  }
 
   return available;
 }
@@ -69,15 +78,13 @@ function getSlotsForDate(fechaKey) {
 
   const slots = [];
   const { start, end } = horario;
-  const step = CONFIG.SLOT_DURATION_MIN;
+  const step     = CONFIG.SLOT_INTERVAL_MIN  || 60;  // intervalo entre slots
+  const duration = CONFIG.SLOT_DURATION_MIN  || 45;  // duración de la cita
 
-  for (let h = start; h < end; h++) {
-    for (let m = 0; m < 60; m += step) {
-      if (h * 60 + m + step > end * 60) break;
-      const hStr = String(h).padStart(2, '0');
-      const mStr = String(m).padStart(2, '0');
-      slots.push(`${hStr}:${mStr}`);
-    }
+  for (let totalMin = start * 60; totalMin + duration <= end * 60; totalMin += step) {
+    const h = Math.floor(totalMin / 60);
+    const m = totalMin % 60;
+    slots.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
   }
 
   return slots;
@@ -101,13 +108,12 @@ async function getAvailableSlotsForDate(fechaKey) {
     freeSlots = null;
   }
 
-  // Si GHL está en modo demo (no configurado) o falló → todos libres
-  if (freeSlots === null) {
+  // Si GHL falló o no devolvió nada → todos los slots libres (fallback graceful)
+  if (freeSlots === null || freeSlots.length === 0) {
     return allSlots.map(time => ({ time, available: true }));
   }
 
-  // Si GHL devolvió array vacío → todos ocupados (respetamos la respuesta)
-  // Si GHL devolvió slots → filtramos
+  // GHL devolvió slots → filtramos contra la lista de libres
   const freeSet = new Set(freeSlots);
 
   return allSlots.map(time => ({
@@ -335,9 +341,8 @@ async function renderSlots(fechaKey, onSlotSelect) {
   html += `<div class="slots-grid">`;
 
   slots.forEach(({ time, available }) => {
-    const cls = available ? 'slot' : 'slot slot-taken';
-    const attr = available ? `data-time="${time}"` : '';
-    html += `<div class="${cls}" ${attr}>${time}</div>`;
+    if (!available) return;  // slots ocupados no se muestran
+    html += `<div class="slot" data-time="${time}">${time}</div>`;
   });
 
   html += `</div>`;

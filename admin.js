@@ -7,6 +7,8 @@ const adminState = {
   authenticated: false,
   appointments:  [],
   activeSection: 'resumen',
+  users:         [],   // closers disponibles
+  filtered:      [],   // appointments tras aplicar filtros
 };
 
 // ── INIT ─────────────────────────────────────
@@ -123,11 +125,20 @@ async function loadData() {
   }
 
   adminState.appointments = appointments;
+
+  // Cargar lista de closers
+  try {
+    const r = await fetch('/api/admin/users', {
+      headers: { 'Authorization': `Bearer ${sessionStorage.getItem('adminToken')}` },
+    });
+    if (r.ok) adminState.users = await r.json();
+  } catch (_) {}
+
   showLoadingIndicator(false);
 
   renderMetrics();
   renderCharts();
-  renderTable();
+  applyFilters();    // inicializa filtered y llama a renderTable()
   renderConfigSection();
 }
 
@@ -147,19 +158,30 @@ function getBookingsFromStorage() {
  */
 function normalizeStoredBooking(record) {
   return {
-    id:            record.id,
-    title:         `${record.nombre} ${record.apellidos}`,
-    firstName:     record.nombre,
-    lastName:      record.apellidos,
-    email:         record.email,
-    phone:         record.telefono,
-    inversion:     record.inversion,
-    tier:          record.tier,
-    startTime:     `${record.fechaSeleccionada}T${record.slotSeleccionado}:00`,
-    status:        record.estado || 'confirmado',
-    appointmentId: record.appointmentId,
-    contactId:     record.contactId,
+    id:             record.id,
+    title:          `${record.nombre} ${record.apellidos}`,
+    firstName:      record.nombre,
+    lastName:       record.apellidos,
+    email:          record.email,
+    phone:          record.telefono,
+    inversion:      record.inversion,
+    tier:           record.tier,
+    facturacion:    record.facturacion,
+    sistemaClientes:record.sistemaClientes,
+    tiempoEmpezar:  record.tiempoEmpezar,
+    decisor:        record.decisor,
+    startTime:      `${record.fechaSeleccionada}T${record.slotSeleccionado}:00`,
+    status:         record.estado || 'confirmado',
+    appointmentId:  record.appointmentId,
+    contactId:      record.contactId,
+    assignedUserId: record.assignedUserId || null,
+    bookedAt:       record.bookedAt || record.timestamp,
   };
+}
+
+// Normaliza el campo assignedUserId de respuestas GHL (varios nombres posibles)
+function getAssignedUserId(apt) {
+  return apt.assignedUserId || apt.userId || apt.assignedTo || null;
 }
 
 // ── ANÁLISIS DE DATOS ─────────────────────────
@@ -462,18 +484,105 @@ function renderLineChart(byDay) {
   });
 }
 
+// ── SCORING ───────────────────────────────────
+
+function calcularScore(lead) {
+  let score = 0;
+
+  // Inversión declarada (0-40 pts)
+  if (lead.inversion === '+3000')      score += 40;
+  else if (lead.inversion === '1000-3000') score += 30;
+  else if (lead.inversion === '300-1000')  score += 15;
+
+  // Es el decisor (0-20 pts)
+  if (lead.decisor === 'si')           score += 20;
+  else if (lead.decisor === 'compartido') score += 10;
+
+  // Tiempo para empezar (0-15 pts)
+  if (lead.tiempoEmpezar === 'ahora')      score += 15;
+  else if (lead.tiempoEmpezar === '1mes')  score += 10;
+  else if (lead.tiempoEmpezar === '3meses') score += 5;
+
+  // Facturación (0-15 pts)
+  if (lead.facturacion === '+100k')        score += 15;
+  else if (lead.facturacion === '50-100k') score += 10;
+  else if (lead.facturacion === '20-50k')  score += 5;
+
+  // Sistema de clientes (0-10 pts)
+  if (lead.sistemaClientes === 'si')       score += 10;
+
+  return score;
+}
+
+function scoreBadge(score) {
+  if (score >= 80) return `<span class="badge badge-green">🔥 Caliente</span>`;
+  if (score >= 55) return `<span class="badge badge-blue">Interesante</span>`;
+  if (score >= 30) return `<span class="badge badge-amber">Tibio</span>`;
+  return `<span class="badge badge-gray">Frío</span>`;
+}
+
+function formatBookedAt(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleString('es-ES', {
+    day: 'numeric', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  });
+}
+
+// ── FILTROS Y ORDEN ───────────────────────────
+
+function applyFilters() {
+  const from   = document.getElementById('filter-from')?.value;
+  const to     = document.getElementById('filter-to')?.value;
+  const sortBy = document.getElementById('sort-by')?.value || 'agendo-desc';
+
+  let list = [...adminState.appointments];
+
+  if (from) list = list.filter(apt => getAppointmentDate(apt) >= from);
+  if (to)   list = list.filter(apt => getAppointmentDate(apt) <= to);
+
+  list.sort((a, b) => {
+    if (sortBy === 'fecha-cita-asc')  return getAppointmentDate(a).localeCompare(getAppointmentDate(b));
+    if (sortBy === 'fecha-cita-desc') return getAppointmentDate(b).localeCompare(getAppointmentDate(a));
+    if (sortBy === 'score-desc')      return calcularScore(b) - calcularScore(a);
+    // agendo-desc (default)
+    const ba = a.bookedAt || a.timestamp || '';
+    const bb = b.bookedAt || b.timestamp || '';
+    return bb.localeCompare(ba);
+  });
+
+  adminState.filtered = list;
+
+  const countEl = document.getElementById('filter-count');
+  if (countEl) countEl.textContent = `${list.length} resultado${list.length !== 1 ? 's' : ''}`;
+
+  renderTable();
+}
+
+function clearFilters() {
+  const from = document.getElementById('filter-from');
+  const to   = document.getElementById('filter-to');
+  if (from) from.value = '';
+  if (to)   to.value   = '';
+  applyFilters();
+}
+
 // ── TABLA ─────────────────────────────────────
 
 function renderTable() {
   const tbody = document.getElementById('appointments-tbody');
   if (!tbody) return;
 
-  const appointments = adminState.appointments.slice(0, 20);
+  // Usar lista filtrada/ordenada si existe, si no todos
+  const appointments = (adminState.filtered.length > 0 || adminState.appointments.length === 0
+    ? adminState.filtered
+    : adminState.appointments
+  ).slice(0, 100);
 
   if (appointments.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="7" style="text-align:center;padding:2rem;color:var(--text3)">
+        <td colspan="10" style="text-align:center;padding:2rem;color:var(--text3)">
           No hay agendamientos registrados todavía.
         </td>
       </tr>
@@ -509,18 +618,90 @@ function renderTable() {
       ? 'Confirmado'
       : (apt.status || '—');
 
+    const score    = calcularScore(apt);
+    const bookedAt = formatBookedAt(apt.bookedAt || apt.timestamp);
+    const rowId        = apt.id || apt.appointmentId || Math.random().toString(36).slice(2);
+    const assignedId   = getAssignedUserId(apt);
+
+    const userOptions = adminState.users.map(u =>
+      `<option value="${escapeHtml(u.id)}" ${u.id === assignedId ? 'selected' : ''}>${escapeHtml(u.name)}</option>`
+    ).join('');
+
+    const closerCell = adminState.users.length > 0
+      ? `<td>
+           <div style="display:flex;align-items:center;gap:.375rem">
+             <select id="closer-sel-${rowId}" style="font-size:.8rem;padding:.2rem .4rem;border:1px solid var(--border);border-radius:6px;max-width:130px">
+               <option value="">— Sin asignar —</option>
+               ${userOptions}
+             </select>
+             <button onclick="handleReassign('${escapeHtml(apt.contactId||'')}','${escapeHtml(apt.appointmentId||apt.id||'')}','${rowId}')"
+               style="font-size:.75rem;padding:.2rem .5rem;background:var(--blue);color:#fff;border:none;border-radius:6px;cursor:pointer">
+               OK
+             </button>
+             <span id="closer-fb-${rowId}" style="font-size:.8rem"></span>
+           </div>
+         </td>`
+      : `<td>—</td>`;
+
     return `
       <tr>
         <td class="td-name">${escapeHtml(name)}</td>
         <td class="td-email">${escapeHtml(email)}</td>
         <td>${escapeHtml(inv)}</td>
         <td><span class="badge ${tierBadge}">${tierLabel}</span></td>
+        <td>${scoreBadge(score)}</td>
+        <td>${bookedAt}</td>
         <td>${dateStr}</td>
         <td>${timeStr}</td>
+        ${closerCell}
         <td><span class="badge ${statusBadge}">${statusLabel}</span></td>
       </tr>
     `;
   }).join('');
+}
+
+// ── REASIGNAR CLOSER ──────────────────────────
+
+function handleReassign(contactId, appointmentId, rowId) {
+  const sel        = document.getElementById(`closer-sel-${rowId}`);
+  const feedbackEl = document.getElementById(`closer-fb-${rowId}`);
+  const newOwnerId = sel?.value;
+  if (!newOwnerId || !contactId || !appointmentId) return;
+  reassignCloser(contactId, appointmentId, newOwnerId, feedbackEl);
+}
+
+async function reassignCloser(contactId, appointmentId, newOwnerId, feedbackEl) {
+  feedbackEl.textContent = '⏳';
+  feedbackEl.style.color = 'inherit';
+  feedbackEl.title       = '';
+  try {
+    const r    = await fetch('/api/admin/reassign', {
+      method:  'PUT',
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': `Bearer ${sessionStorage.getItem('adminToken')}`,
+      },
+      body: JSON.stringify({ contactId, appointmentId, newOwnerId }),
+    });
+    const data = await r.json();
+    if (r.ok) {
+      if (data.warning) {
+        feedbackEl.style.color = 'var(--amber, #f59e0b)';
+        feedbackEl.textContent = '⚠ Parcial';
+        feedbackEl.title       = data.warning;  // tooltip con el detalle
+      } else {
+        feedbackEl.style.color = 'var(--green)';
+        feedbackEl.textContent = '✓ Reasignado';
+      }
+    } else {
+      feedbackEl.style.color = 'var(--red, #ef4444)';
+      feedbackEl.textContent = 'Error';
+      feedbackEl.title       = data.error || '';
+    }
+  } catch (_) {
+    feedbackEl.style.color = 'var(--red, #ef4444)';
+    feedbackEl.textContent = 'Error';
+  }
 }
 
 // ── SECCIÓN CONFIG ────────────────────────────

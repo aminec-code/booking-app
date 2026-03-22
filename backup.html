@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Backup — Base de datos local</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body { background: var(--bg); min-height: 100vh; }
+
+    .backup-wrap {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem;
+    }
+
+    .backup-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .backup-title {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 1.375rem;
+      color: var(--text);
+    }
+
+    .backup-subtitle {
+      font-size: .875rem;
+      color: var(--text2);
+      margin-top: .25rem;
+    }
+
+    .backup-stats {
+      display: flex;
+      gap: 1.5rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .stat-chip {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: .75rem 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: .125rem;
+    }
+
+    .stat-chip-value {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 1.5rem;
+      color: var(--text);
+    }
+
+    .stat-chip-label {
+      font-size: .8rem;
+      color: var(--text3);
+    }
+
+    .filters-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .75rem;
+      align-items: center;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius) var(--radius) 0 0;
+      padding: .875rem 1.25rem;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-top: none;
+      border-radius: 0 0 var(--radius) var(--radius);
+      background: var(--surface);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .8rem;
+    }
+
+    th {
+      background: var(--bg);
+      padding: .625rem .875rem;
+      text-align: left;
+      font-size: .7rem;
+      font-weight: 600;
+      color: var(--text3);
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    td {
+      padding: .625rem .875rem;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+      white-space: nowrap;
+    }
+
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--bg); }
+
+    .empty-state {
+      text-align: center;
+      padding: 3rem;
+      color: var(--text3);
+    }
+
+    .status-ok   { color: #065F46; background: #D1FAE5; padding: .2rem .6rem; border-radius: 999px; font-weight: 600; font-size: .75rem; }
+    .status-fail { color: #991B1B; background: #FEE2E2; padding: .2rem .6rem; border-radius: 999px; font-weight: 600; font-size: .75rem; }
+
+    /* Login overlay */
+    .backup-login {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 1.5rem;
+    }
+
+    .backup-login-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 2.5rem 2rem;
+      width: 100%;
+      max-width: 380px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen" class="backup-login">
+  <div class="backup-login-card">
+    <div style="font-size:2rem;margin-bottom:1rem">🗄️</div>
+    <h1 style="font-family:'Syne',sans-serif;font-weight:700;font-size:1.25rem;margin-bottom:.5rem">Base de datos local</h1>
+    <p style="font-size:.875rem;color:var(--text2);margin-bottom:1.5rem">Backup de seguridad — independiente de GHL</p>
+    <form id="login-form" novalidate>
+      <div style="text-align:left;margin-bottom:1rem">
+        <label class="form-label" for="login-password">Contraseña admin</label>
+        <input class="form-input" type="password" id="login-password" placeholder="••••••••" autofocus required>
+        <div id="login-error" style="color:#EF4444;font-size:.8rem;margin-top:.375rem;min-height:1.2em"></div>
+      </div>
+      <button type="submit" class="btn btn-primary btn-full">Acceder</button>
+    </form>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard-screen" class="hidden backup-wrap">
+
+  <div class="backup-header">
+    <div>
+      <div class="backup-title">🗄️ Base de datos local de seguridad</div>
+      <div class="backup-subtitle">Datos guardados localmente en el servidor · Independiente de GHL</div>
+    </div>
+    <div style="display:flex;gap:.75rem;align-items:center">
+      <span id="last-updated" style="font-size:.8rem;color:var(--text3)"></span>
+      <button class="btn btn-ghost btn-sm" onclick="loadData()">🔄 Refrescar</button>
+      <button class="btn btn-secondary btn-sm" onclick="exportCSV()">⬇️ Exportar CSV</button>
+      <button class="btn btn-ghost btn-sm" onclick="logout()">Salir</button>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="backup-stats" id="stats-row">
+    <div class="stat-chip">
+      <span class="stat-chip-value" id="stat-total">—</span>
+      <span class="stat-chip-label">Total agendados</span>
+    </div>
+    <div class="stat-chip">
+      <span class="stat-chip-value" id="stat-prioritario">—</span>
+      <span class="stat-chip-label">Prioritario (VIP)</span>
+    </div>
+    <div class="stat-chip">
+      <span class="stat-chip-value" id="stat-estandar">—</span>
+      <span class="stat-chip-label">Estándar</span>
+    </div>
+    <div class="stat-chip">
+      <span class="stat-chip-value" id="stat-last">—</span>
+      <span class="stat-chip-label">Último agendamiento</span>
+    </div>
+  </div>
+
+  <!-- Filtros -->
+  <div class="filters-bar">
+    <div style="display:flex;align-items:center;gap:.5rem;font-size:.875rem">
+      <label style="font-weight:600;color:var(--text2)">Buscar</label>
+      <input type="text" id="search" class="form-input" placeholder="Nombre, email..." style="padding:.3rem .6rem;font-size:.8rem;width:200px" oninput="applyFilters()">
+    </div>
+    <div style="display:flex;align-items:center;gap:.5rem;font-size:.875rem">
+      <label style="font-weight:600;color:var(--text2)">Desde</label>
+      <input type="date" id="filter-from" class="form-input" style="padding:.3rem .6rem;font-size:.8rem;width:auto" oninput="applyFilters()">
+    </div>
+    <div style="display:flex;align-items:center;gap:.5rem;font-size:.875rem">
+      <label style="font-weight:600;color:var(--text2)">Hasta</label>
+      <input type="date" id="filter-to" class="form-input" style="padding:.3rem .6rem;font-size:.8rem;width:auto" oninput="applyFilters()">
+    </div>
+    <div style="display:flex;align-items:center;gap:.5rem;font-size:.875rem">
+      <label style="font-weight:600;color:var(--text2)">Tier</label>
+      <select id="filter-tier" class="form-input" style="padding:.3rem .6rem;font-size:.8rem;width:auto" onchange="applyFilters()">
+        <option value="">Todos</option>
+        <option value="vip">Prioritario</option>
+        <option value="basico">Estándar</option>
+      </select>
+    </div>
+    <button class="btn btn-ghost btn-sm" onclick="clearFilters()" style="font-size:.8rem">Limpiar</button>
+    <span id="filter-count" style="font-size:.8rem;color:var(--text3);margin-left:auto"></span>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Nombre</th>
+          <th>Email</th>
+          <th>Teléfono</th>
+          <th>Inversión</th>
+          <th>Tier</th>
+          <th>Negocio</th>
+          <th>Ticket medio</th>
+          <th>Facturación</th>
+          <th>Decisor</th>
+          <th>Tiempo</th>
+          <th>Fecha cita</th>
+          <th>Hora cita</th>
+          <th>Agendó</th>
+          <th>Estado</th>
+        </tr>
+      </thead>
+      <tbody id="backup-tbody">
+        <tr><td colspan="15" class="empty-state">Cargando…</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<script src="config.js"></script>
+<script>
+// ── ESTADO ────────────────────────────────────
+let allBookings  = [];
+let adminToken   = sessionStorage.getItem('backupToken') || '';
+
+// ── LOGIN ─────────────────────────────────────
+document.getElementById('login-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const pass = document.getElementById('login-password').value;
+  const btn  = e.target.querySelector('button[type="submit"]');
+  btn.disabled = true;
+
+  const r = await fetch('/api/admin/login', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ password: pass }),
+  });
+  const data = await r.json();
+
+  if (r.ok && data.token) {
+    adminToken = data.token;
+    sessionStorage.setItem('backupToken', adminToken);
+    showDashboard();
+  } else {
+    document.getElementById('login-error').textContent = 'Contraseña incorrecta';
+    btn.disabled = false;
+  }
+});
+
+function logout() {
+  sessionStorage.removeItem('backupToken');
+  location.reload();
+}
+
+// ── INIT ──────────────────────────────────────
+if (adminToken) {
+  showDashboard();
+} // else login screen is already visible
+
+async function showDashboard() {
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('dashboard-screen').classList.remove('hidden');
+  await loadData();
+}
+
+// ── CARGA DE DATOS ────────────────────────────
+async function loadData() {
+  const r = await fetch('/api/admin/backup', {
+    headers: { 'Authorization': `Bearer ${adminToken}` },
+  });
+
+  if (!r.ok) {
+    if (r.status === 401) { logout(); return; }
+    return;
+  }
+
+  allBookings = await r.json();
+  // Ordenar por bookedAt desc (más reciente primero)
+  allBookings.sort((a, b) => (b.bookedAt || b.timestamp || '').localeCompare(a.bookedAt || a.timestamp || ''));
+
+  renderStats();
+  applyFilters();
+
+  const el = document.getElementById('last-updated');
+  if (el) el.textContent = `Actualizado: ${new Date().toLocaleTimeString('es-ES')}`;
+}
+
+// ── STATS ─────────────────────────────────────
+function renderStats() {
+  document.getElementById('stat-total').textContent = allBookings.length;
+
+  const prio  = allBookings.filter(b => b.tier === 'vip').length;
+  const est   = allBookings.filter(b => b.tier === 'basico').length;
+  document.getElementById('stat-prioritario').textContent = prio;
+  document.getElementById('stat-estandar').textContent    = est;
+
+  const last = allBookings[0];
+  document.getElementById('stat-last').textContent = last
+    ? formatDate(last.bookedAt || last.timestamp)
+    : '—';
+}
+
+// ── FILTROS ───────────────────────────────────
+function applyFilters() {
+  const search = document.getElementById('search')?.value.toLowerCase() || '';
+  const from   = document.getElementById('filter-from')?.value || '';
+  const to     = document.getElementById('filter-to')?.value   || '';
+  const tier   = document.getElementById('filter-tier')?.value || '';
+
+  let list = allBookings.filter(b => {
+    const name  = `${b.nombre || ''} ${b.apellidos || ''}`.toLowerCase();
+    const email = (b.email || '').toLowerCase();
+    const date  = (b.fechaSeleccionada || '').substring(0, 10);
+
+    if (search && !name.includes(search) && !email.includes(search)) return false;
+    if (from && date < from) return false;
+    if (to   && date > to)   return false;
+    if (tier && b.tier !== tier) return false;
+    return true;
+  });
+
+  document.getElementById('filter-count').textContent =
+    `${list.length} resultado${list.length !== 1 ? 's' : ''}`;
+
+  renderTable(list);
+}
+
+function clearFilters() {
+  document.getElementById('search').value      = '';
+  document.getElementById('filter-from').value = '';
+  document.getElementById('filter-to').value   = '';
+  document.getElementById('filter-tier').value = '';
+  applyFilters();
+}
+
+// ── TABLA ─────────────────────────────────────
+function renderTable(list) {
+  const tbody = document.getElementById('backup-tbody');
+
+  if (list.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="15" class="empty-state">No hay registros que coincidan.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = list.map((b, idx) => {
+    const tierLabel = b.tier === 'vip' ? 'Prioritario' : 'Estándar';
+    const tierColor = b.tier === 'vip' ? '#1D4ED8' : '#6B7280';
+    const status    = b.estado === 'confirmado' ? 'ok' : 'fail';
+    const decisorMap = { si: 'Sí', no: 'No', compartido: 'Compartido' };
+
+    return `
+      <tr>
+        <td style="color:var(--text3)">${list.length - idx}</td>
+        <td style="font-weight:600">${esc(b.nombre)} ${esc(b.apellidos)}</td>
+        <td>${esc(b.email)}</td>
+        <td>${esc(b.telefono)}</td>
+        <td>${esc(b.inversion)}</td>
+        <td><span style="color:${tierColor};font-weight:600">${tierLabel}</span></td>
+        <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis">${esc(b.negocio)}</td>
+        <td>${esc(b.ticketMedio)}</td>
+        <td>${esc(b.facturacion)}</td>
+        <td>${esc(decisorMap[b.decisor] || b.decisor)}</td>
+        <td>${esc(b.tiempoEmpezar)}</td>
+        <td>${esc(b.fechaSeleccionada)}</td>
+        <td>${esc(b.slotSeleccionado)}</td>
+        <td>${formatDate(b.bookedAt || b.timestamp)}</td>
+        <td><span class="status-${status}">${b.estado || 'confirmado'}</span></td>
+      </tr>
+    `;
+  }).join('');
+}
+
+// ── EXPORT CSV ────────────────────────────────
+function exportCSV() {
+  const headers = [
+    'Nombre','Apellidos','Email','Teléfono','Inversión','Tier',
+    'Negocio','Ticket medio','Facturación','Margen','Decisor',
+    'Tiempo para empezar','Sistema clientes','Instagram',
+    'Publica redes','Cierra ventas','Clientes llegan',
+    'Fecha cita','Hora cita','Agendó','Estado',
+    'ContactId','AppointmentId',
+  ];
+
+  const rows = allBookings.map(b => [
+    b.nombre, b.apellidos, b.email, b.telefono, b.inversion,
+    b.tier === 'vip' ? 'Prioritario' : 'Estándar',
+    b.negocio, b.ticketMedio, b.facturacion, b.margen, b.decisor,
+    b.tiempoEmpezar, b.sistemaClientes, b.instagram,
+    b.publicaRedes, b.cierraVentas,
+    Array.isArray(b.clientesLlegan) ? b.clientesLlegan.join('|') : (b.clientesLlegan || ''),
+    b.fechaSeleccionada, b.slotSeleccionado,
+    b.bookedAt || b.timestamp, b.estado,
+    b.contactId, b.appointmentId,
+  ].map(v => `"${String(v || '').replace(/"/g, '""')}"`));
+
+  const csv  = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `bookings_backup_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ── HELPERS ───────────────────────────────────
+function esc(str) {
+  return String(str || '—')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function formatDate(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleString('es-ES', {
+    day: 'numeric', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  });
+}
+</script>
+</body>
+</html>

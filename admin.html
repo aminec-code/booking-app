@@ -285,25 +285,52 @@
 
       <div class="table-card">
         <div class="table-header">
-          <span class="table-header-title">Últimos 20 agendamientos</span>
-          <button class="btn btn-ghost btn-sm" onclick="refreshData()">🔄 Refrescar</button>
+          <span class="table-header-title">Agendamientos</span>
+          <button class="btn btn-ghost btn-sm" id="btn-refresh" onclick="refreshData()">🔄 Refrescar</button>
         </div>
+
+        <!-- Filtros y ordenación -->
+        <div style="display:flex;flex-wrap:wrap;gap:.75rem;align-items:center;padding:.75rem 1.25rem;border-bottom:1px solid var(--border);background:var(--bg)">
+          <div style="display:flex;align-items:center;gap:.5rem;font-size:.875rem">
+            <label style="font-weight:600;color:var(--text2)">Desde</label>
+            <input type="date" id="filter-from" class="form-input" style="padding:.3rem .6rem;font-size:.8rem;width:auto" oninput="applyFilters()">
+          </div>
+          <div style="display:flex;align-items:center;gap:.5rem;font-size:.875rem">
+            <label style="font-weight:600;color:var(--text2)">Hasta</label>
+            <input type="date" id="filter-to" class="form-input" style="padding:.3rem .6rem;font-size:.8rem;width:auto" oninput="applyFilters()">
+          </div>
+          <div style="display:flex;align-items:center;gap:.5rem;font-size:.875rem">
+            <label style="font-weight:600;color:var(--text2)">Ordenar por</label>
+            <select id="sort-by" class="form-input" style="padding:.3rem .6rem;font-size:.8rem;width:auto" onchange="applyFilters()">
+              <option value="fecha-cita-asc">Fecha cita ↑</option>
+              <option value="fecha-cita-desc">Fecha cita ↓</option>
+              <option value="agendo-desc" selected>Cuándo agendó (reciente)</option>
+              <option value="score-desc">Score (mayor)</option>
+            </select>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="clearFilters()" style="font-size:.8rem">Limpiar filtros</button>
+          <span id="filter-count" style="font-size:.8rem;color:var(--text3);margin-left:auto"></span>
+        </div>
+
         <div style="overflow-x:auto">
-          <table class="data-table">
+          <table class="data-table" style="font-size:.8rem">
             <thead>
               <tr>
                 <th>Nombre</th>
                 <th>Email</th>
                 <th>Inversión</th>
                 <th>Tier</th>
+                <th>Score</th>
+                <th>Agendó</th>
                 <th>Fecha cita</th>
                 <th>Hora</th>
+                <th>Closer</th>
                 <th>Estado</th>
               </tr>
             </thead>
             <tbody id="appointments-tbody">
               <tr>
-                <td colspan="7" style="text-align:center;padding:2rem;color:var(--text3)">
+                <td colspan="10" style="text-align:center;padding:2rem;color:var(--text3)">
                   Cargando datos…
                 </td>
               </tr>

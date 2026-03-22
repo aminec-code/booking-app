@@ -364,38 +364,30 @@ async function confirmBooking() {
 
   showLoadingState();
 
+  // Aviso si tarda más de 8 segundos
+  const slowTimer = setTimeout(() => {
+    setLoadingStatus('Estamos registrando tu cita, no cierres esta ventana…');
+  }, 8000);
+
   try {
     setLoadingStatus('Registrando tus datos…');
-    const contactId = await ghlUpsertContact({
-      nombre:      bookingState.nombre,
-      apellidos:   bookingState.apellidos,
-      email:       bookingState.email,
-      telefono:    bookingState.telefono,
-      inversion:   bookingState.inversion,
-      tier:        bookingState.tier,
-      negocio:     bookingState.negocio,
-      ticketMedio: bookingState.ticketMedio,
-    });
-    bookingState.contactId = contactId;
+    const result = await ghlSubmitBooking(bookingState);
 
-    setLoadingStatus('Creando tu registro…');
-    const nombreCompleto = `${bookingState.nombre} ${bookingState.apellidos}`;
-    const opportunityId  = await ghlCreateOpportunity(contactId, bookingState.tier, nombreCompleto);
-    bookingState.opportunityId = opportunityId;
+    bookingState.contactId      = result.contactId;
+    bookingState.opportunityId  = result.opportunityId;
+    bookingState.appointmentId  = result.appointmentId;
+    bookingState.assignedUserId = result.assignedUserId;
 
-    setLoadingStatus('Confirmando tu cita en el calendario…');
-    const appointmentId = await ghlCreateAppointment(
-      contactId,
-      bookingState.fechaSeleccionada,
-      bookingState.slotSeleccionado,
-    );
-    bookingState.appointmentId = appointmentId;
+    setLoadingStatus('Preparando tu confirmación…');
+    const closerName = await ghlGetUserName(result.assignedUserId);
 
+    clearTimeout(slowTimer);
     saveBookingToStorage();
-    renderConfirmation();
+    renderConfirmation(closerName);
 
   } catch (err) {
-    showErrorState(err.message);
+    clearTimeout(slowTimer);
+    showErrorState(err.message, err.errorCode || null);
   }
 }
 
@@ -421,7 +413,7 @@ function setLoadingStatus(msg) {
   if (el) el.textContent = msg;
 }
 
-function showErrorState(errorMsg) {
+function showErrorState(_errorMsg, errorCode = null) {
   const step2 = document.getElementById('step-2');
   if (!step2) return;
   step2.innerHTML = `
@@ -430,8 +422,19 @@ function showErrorState(errorMsg) {
       <h2 style="font-family:'Syne',sans-serif;font-weight:700;font-size:1.25rem;margin-bottom:.75rem;color:var(--text)">
         No se pudo confirmar la reserva
       </h2>
-      <p style="color:var(--text2);font-size:.9rem;margin-bottom:1.5rem;max-width:380px;margin-left:auto;margin-right:auto">
-        ${escapeHtml(errorMsg)}
+      <p style="color:var(--text2);font-size:.9rem;margin-bottom:.75rem;max-width:380px;margin-left:auto;margin-right:auto">
+        Ha ocurrido un error técnico. Por favor contáctanos directamente:
+      </p>
+      ${errorCode ? `<p style="font-size:.75rem;color:var(--text3);margin-bottom:.5rem">Código de error: <code>${escapeHtml(errorCode)}</code></p>` : ''}
+      <p style="font-size:.875rem;color:var(--text);margin-bottom:.5rem">
+        📞 <strong>${escapeHtml(CONFIG.CONTACT_FALLBACK.telefono)}</strong>
+      </p>
+      <p style="font-size:.875rem;color:var(--text);margin-bottom:1rem">
+        ✉️ <strong>${escapeHtml(CONFIG.CONTACT_FALLBACK.email)}</strong>
+      </p>
+      <p style="font-size:.8rem;color:var(--text3);margin-bottom:1.5rem">
+        Indica: <strong>${escapeHtml(bookingState.nombre)} ${escapeHtml(bookingState.apellidos)}</strong>
+        · ${escapeHtml(bookingState.fechaSeleccionada)} · ${escapeHtml(bookingState.slotSeleccionado)}
       </p>
       <div style="display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap">
         <button class="btn btn-primary" id="btn-retry">Reintentar</button>
@@ -467,7 +470,7 @@ function showErrorState(errorMsg) {
 
 // ── CONFIRMACIÓN ──────────────────────────────
 
-function renderConfirmation() {
+function renderConfirmation(closerName = null) {
   const { nombre, apellidos, email, fechaSeleccionada, slotSeleccionado } = bookingState;
 
   const dateObj = parseLocalDate(fechaSeleccionada);
@@ -528,6 +531,14 @@ function renderConfirmation() {
         </div>
       </div>
 
+      <div class="banner banner-green" style="margin-bottom:1rem">
+        <span class="banner-icon">🎯</span>
+        <span>${closerName
+          ? `Tu llamada será con <strong>${escapeHtml(closerName)}</strong>`
+          : 'Tu llamada está confirmada — te contactaremos con los detalles'
+        }</span>
+      </div>
+
       <a href="${gcalUrl}" target="_blank" rel="noopener" class="btn btn-secondary btn-full" style="margin-bottom:.75rem">
         📆 Añadir a Google Calendar
       </a>
@@ -573,11 +584,20 @@ function saveBookingToStorage() {
     contactId:         bookingState.contactId,
     opportunityId:     bookingState.opportunityId,
     appointmentId:     bookingState.appointmentId,
+    assignedUserId:    bookingState.assignedUserId,
+    bookedAt:          new Date().toISOString(),
     timestamp:         new Date().toISOString(),
     estado:            'confirmado',
   };
   existing.push(record);
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(existing)); } catch (_) {}
+
+  // Guardar también en la base de datos local del servidor (backup de seguridad)
+  fetch('/api/save-booking', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify(record),
+  }).catch(() => {}); // silencioso — no bloquea el flujo
 }
 
 function getBookingsFromStorage() {

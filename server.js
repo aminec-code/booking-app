@@ -5,10 +5,116 @@ const express   = require('express');
 const rateLimit = require('express-rate-limit');
 const crypto    = require('crypto');
 const path      = require('path');
+const fs        = require('fs');
+
+// ── ARCHIVOS DE DATOS ─────────────────────────
+const LOGS_DIR             = path.join(__dirname, 'logs');
+const ERRORS_LOG           = path.join(LOGS_DIR, 'errors.log');
+const FAILED_BOOKINGS_FILE = path.join(__dirname, 'failed_bookings.json');
+const BACKUP_DB_FILE       = path.join(__dirname, 'bookings_backup.json');
+
+if (!fs.existsSync(LOGS_DIR)) fs.mkdirSync(LOGS_DIR, { recursive: true });
+
+// ── LOGGING ───────────────────────────────────
+
+function tsNow() {
+  return new Date().toLocaleString('sv-SE', { timeZone: 'Europe/Madrid' }).replace('T', ' ');
+}
+
+function writeLog(step, status, ghlBody, leadMeta) {
+  const meta = leadMeta
+    ? `${leadMeta.email} | ${leadMeta.tier} | ${leadMeta.fecha || '?'} | ${leadMeta.hora || '?'}`
+    : '—';
+  const line = [
+    `[${tsNow()}] ERROR en ${step}`,
+    `GHL status: ${status}`,
+    `GHL response: ${typeof ghlBody === 'string' ? ghlBody.slice(0, 500) : JSON.stringify(ghlBody)}`,
+    `Lead: ${meta}`,
+    '---',
+  ].join('\n') + '\n\n';
+
+  console.error(line);
+  try { fs.appendFileSync(ERRORS_LOG, line); } catch (_) {}
+}
+
+function parseGHLError(bodyText) {
+  try {
+    const parsed = JSON.parse(bodyText);
+    return parsed?.message || parsed?.msg || parsed?.error || bodyText.slice(0, 200);
+  } catch (_) {
+    return String(bodyText || '').slice(0, 200);
+  }
+}
+
+// ── FAILED BOOKINGS ───────────────────────────
+
+function readFailedBookings() {
+  try { return JSON.parse(fs.readFileSync(FAILED_BOOKINGS_FILE, 'utf8')); } catch (_) { return []; }
+}
+
+function appendFailedBookingFull(data) {
+  const existing = readFailedBookings();
+  const record = {
+    id:            crypto.randomUUID(),
+    timestamp:     new Date().toISOString(),
+    email:         data.email         || null,
+    telefono:      data.telefono      || null,
+    nombre:        data.nombre        || null,
+    apellidos:     data.apellidos     || null,
+    tier:          data.tier          || null,
+    fechaIntentada:data.fechaIntentada|| null,
+    horaIntentada: data.horaIntentada || null,
+    errorStep:     data.errorStep     || null,
+    errorCode:     data.errorCode     || 0,
+    errorMessage:  data.errorMessage  || null,
+    resuelto:      false,
+  };
+  existing.push(record);
+  try { fs.writeFileSync(FAILED_BOOKINGS_FILE, JSON.stringify(existing, null, 2)); } catch (_) {}
+  return record;
+}
+
+function resolveFailedBookings(email, appointmentId, fecha, hora) {
+  if (!email) return;
+  let existing = readFailedBookings();
+  let changed  = false;
+  existing = existing.map(r => {
+    if (r.email === email && !r.resuelto) {
+      changed = true;
+      return {
+        ...r,
+        resuelto: true,
+        resueltoCon: { appointmentId, fecha, hora, timestamp: new Date().toISOString() },
+      };
+    }
+    return r;
+  });
+  if (changed) {
+    try { fs.writeFileSync(FAILED_BOOKINGS_FILE, JSON.stringify(existing, null, 2)); } catch (_) {}
+  }
+}
+
+// ── BACKUP DB ─────────────────────────────────
+
+function readBackupDB() {
+  try { return JSON.parse(fs.readFileSync(BACKUP_DB_FILE, 'utf8')); } catch (_) { return []; }
+}
+
+function upsertBackupDB(record) {
+  const existing = readBackupDB();
+  const idx = record.appointmentId
+    ? existing.findIndex(r => r.appointmentId === record.appointmentId)
+    : -1;
+  if (idx >= 0) existing[idx] = { ...existing[idx], ...record };
+  else existing.push(record);
+  try { fs.writeFileSync(BACKUP_DB_FILE, JSON.stringify(existing, null, 2)); } catch (_) {}
+}
+
+// ── EXPRESS ───────────────────────────────────
 
 const app = express();
 app.use(express.json());
-app.use(express.static(path.join(__dirname))); // sirve index.html, admin.html, etc.
+app.use(express.static(path.join(__dirname)));
 
 const GHL     = 'https://services.leadconnectorhq.com';
 const VERSION = '2021-07-28';
@@ -21,7 +127,13 @@ function ghlHeaders() {
   };
 }
 
-// Token de admin = HMAC-SHA256 de la contraseña (determinista, sin estado)
+function ghlFetch(url, options = {}) {
+  const controller = new AbortController();
+  const timeout    = setTimeout(() => controller.abort(), 10_000);
+  return fetch(url, { ...options, signal: controller.signal })
+    .finally(() => clearTimeout(timeout));
+}
+
 function adminToken() {
   return crypto
     .createHmac('sha256', process.env.ADMIN_PASSWORD)
@@ -35,13 +147,150 @@ function requireAdmin(req, res, next) {
   res.status(401).json({ error: 'No autorizado' });
 }
 
-// Rate limit: 60 peticiones cada 15 min por IP
+// Rate limit por IP: 200 req / 15 min
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 60,
+  max: 200,
   message: { error: 'Demasiadas peticiones. Espera un momento.' },
 });
+
+// Rate limit global: 2000 req / 15 min
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 2000,
+  keyGenerator: () => 'global',
+  message: { error: 'Servidor ocupado. Inténtalo en unos segundos.' },
+});
+
+app.use('/api/', globalLimiter);
 app.use('/api/', limiter);
+
+// ══════════════════════════════════════════════
+//  POST /api/booking — FLUJO COMPLETO (3 pasos)
+// ══════════════════════════════════════════════
+app.post('/api/booking', async (req, res) => {
+  const { contact, opportunity, appointment, leadMeta } = req.body || {};
+  const tag = `[${leadMeta?.email || '?'}]`;
+
+  // ── PASO 1: Contacto ────────────────────────
+  let contactId;
+  try {
+    console.log(`${tag} PASO 1 — Upsert contacto`);
+    const r    = await ghlFetch(`${GHL}/contacts/upsert`, {
+      method:  'POST',
+      headers: ghlHeaders(),
+      body:    JSON.stringify({ locationId: process.env.GHL_LOCATION_ID, ...contact }),
+    });
+    const bodyText = await r.text();
+    if (!r.ok) {
+      const msg = parseGHLError(bodyText);
+      writeLog('CONTACTO', r.status, bodyText, leadMeta);
+      appendFailedBookingFull({ ...leadMeta, fechaIntentada: leadMeta?.fecha, horaIntentada: leadMeta?.hora, errorStep: 'contact', errorCode: r.status, errorMessage: msg });
+      return res.json({ success: false, errorStep: 'contact', errorCode: r.status, errorMessage: msg });
+    }
+    const data = JSON.parse(bodyText);
+    contactId  = data?.contact?.id || data?.id;
+    if (!contactId) throw new Error('GHL no devolvió contactId');
+    console.log(`${tag} Contacto OK: ${contactId}`);
+  } catch (err) {
+    writeLog('CONTACTO', 0, err.message, leadMeta);
+    appendFailedBookingFull({ ...leadMeta, fechaIntentada: leadMeta?.fecha, horaIntentada: leadMeta?.hora, errorStep: 'contact', errorCode: 0, errorMessage: err.message });
+    return res.json({ success: false, errorStep: 'contact', errorCode: 0, errorMessage: err.message });
+  }
+
+  // ── PASO 2: Oportunidad (sin duplicados) ────
+  let opportunityId;
+  try {
+    console.log(`${tag} PASO 2 — Buscar oportunidad existente`);
+    const searchParams = new URLSearchParams({
+      location_id: process.env.GHL_LOCATION_ID,
+      contact_id:  contactId,
+    });
+    const searchR = await ghlFetch(`${GHL}/opportunities/search?${searchParams}`, { headers: ghlHeaders() });
+    if (searchR.ok) {
+      const searchData = await searchR.json();
+      const existing   = (searchData.opportunities || []).find(o => o.pipelineId === process.env.GHL_PIPELINE_ID);
+      if (existing) {
+        console.log(`${tag} Oportunidad existente encontrada: ${existing.id} — actualizando`);
+        await ghlFetch(`${GHL}/opportunities/${existing.id}`, {
+          method:  'PUT',
+          headers: ghlHeaders(),
+          body:    JSON.stringify({ name: opportunity?.name, pipelineStageId: process.env.GHL_STAGE_ID }),
+        });
+        opportunityId = existing.id;
+      }
+    }
+
+    if (!opportunityId) {
+      console.log(`${tag} Creando nueva oportunidad`);
+      const r        = await ghlFetch(`${GHL}/opportunities/`, {
+        method:  'POST',
+        headers: ghlHeaders(),
+        body:    JSON.stringify({
+          locationId:      process.env.GHL_LOCATION_ID,
+          pipelineId:      process.env.GHL_PIPELINE_ID,
+          pipelineStageId: process.env.GHL_STAGE_ID,
+          contactId,
+          status:          'open',
+          monetaryValue:   0,
+          ...opportunity,
+        }),
+      });
+      const bodyText = await r.text();
+      if (!r.ok) {
+        const msg = parseGHLError(bodyText);
+        writeLog('OPORTUNIDAD', r.status, bodyText, leadMeta);
+        appendFailedBookingFull({ ...leadMeta, fechaIntentada: leadMeta?.fecha, horaIntentada: leadMeta?.hora, errorStep: 'opportunity', errorCode: r.status, errorMessage: msg });
+        return res.json({ success: false, errorStep: 'opportunity', errorCode: r.status, errorMessage: msg });
+      }
+      const data    = JSON.parse(bodyText);
+      opportunityId = data?.opportunity?.id || data?.id;
+      console.log(`${tag} Oportunidad creada: ${opportunityId}`);
+    }
+  } catch (err) {
+    writeLog('OPORTUNIDAD', 0, err.message, leadMeta);
+    appendFailedBookingFull({ ...leadMeta, fechaIntentada: leadMeta?.fecha, horaIntentada: leadMeta?.hora, errorStep: 'opportunity', errorCode: 0, errorMessage: err.message });
+    return res.json({ success: false, errorStep: 'opportunity', errorCode: 0, errorMessage: err.message });
+  }
+
+  // ── PASO 3: Cita ────────────────────────────
+  let appointmentId, assignedUserId;
+  try {
+    console.log(`${tag} PASO 3 — Crear cita`);
+    const r        = await ghlFetch(`${GHL}/calendars/events/appointments`, {
+      method:  'POST',
+      headers: ghlHeaders(),
+      body:    JSON.stringify({
+        calendarId: process.env.GHL_CALENDAR_ID,
+        locationId: process.env.GHL_LOCATION_ID,
+        contactId,
+        ...appointment,
+      }),
+    });
+    const bodyText = await r.text();
+    if (!r.ok) {
+      const msg = parseGHLError(bodyText);
+      writeLog('CITA', r.status, bodyText, leadMeta);
+      appendFailedBookingFull({ ...leadMeta, fechaIntentada: leadMeta?.fecha, horaIntentada: leadMeta?.hora, errorStep: 'appointment', errorCode: r.status, errorMessage: msg });
+      return res.json({ success: false, errorStep: 'appointment', errorCode: r.status, errorMessage: msg });
+    }
+    const data     = JSON.parse(bodyText);
+    appointmentId  = data?.id || data?.event?.id || data?.appointment?.id;
+    assignedUserId = data?.assignedUserId || data?.event?.assignedUserId || null;
+    if (!appointmentId) throw new Error('GHL no devolvió appointmentId');
+    console.log(`${tag} Cita OK: ${appointmentId} | closer: ${assignedUserId}`);
+  } catch (err) {
+    writeLog('CITA', 0, err.message, leadMeta);
+    appendFailedBookingFull({ ...leadMeta, fechaIntentada: leadMeta?.fecha, horaIntentada: leadMeta?.hora, errorStep: 'appointment', errorCode: 0, errorMessage: err.message });
+    return res.json({ success: false, errorStep: 'appointment', errorCode: 0, errorMessage: err.message });
+  }
+
+  // ── ÉXITO ────────────────────────────────────
+  resolveFailedBookings(leadMeta?.email, appointmentId, leadMeta?.fecha, leadMeta?.hora);
+  console.log(`${tag} ✅ Booking completo`);
+
+  return res.json({ success: true, contactId, opportunityId, appointmentId, assignedUserId });
+});
 
 // ── GET /api/slots?fecha=YYYY-MM-DD ──────────────────────
 app.get('/api/slots', async (req, res) => {
@@ -49,7 +298,6 @@ app.get('/api/slots', async (req, res) => {
   if (!fecha || !/^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
     return res.status(400).json({ error: 'Parámetro fecha inválido' });
   }
-
   const dayStart = new Date(`${fecha}T00:00:00Z`).getTime();
   const dayEnd   = new Date(`${fecha}T23:59:59Z`).getTime();
   const params   = new URLSearchParams({
@@ -57,9 +305,8 @@ app.get('/api/slots', async (req, res) => {
     endDate:   String(dayEnd),
     timezone:  process.env.TIMEZONE || 'Europe/Madrid',
   });
-
   try {
-    const r    = await fetch(`${GHL}/calendars/${process.env.GHL_CALENDAR_ID}/free-slots?${params}`, { headers: ghlHeaders() });
+    const r    = await ghlFetch(`${GHL}/calendars/${process.env.GHL_CALENDAR_ID}/free-slots?${params}`, { headers: ghlHeaders() });
     const data = await r.json();
     res.status(r.status).json(data);
   } catch (err) {
@@ -67,14 +314,10 @@ app.get('/api/slots', async (req, res) => {
   }
 });
 
-// ── POST /api/contacts/upsert ─────────────────────────────
-app.post('/api/contacts/upsert', async (req, res) => {
+// ── GET /api/user/:userId ─────────────────────────────────
+app.get('/api/user/:userId', async (req, res) => {
   try {
-    const r = await fetch(`${GHL}/contacts/upsert`, {
-      method:  'POST',
-      headers: ghlHeaders(),
-      body:    JSON.stringify({ locationId: process.env.GHL_LOCATION_ID, ...req.body }),
-    });
+    const r    = await ghlFetch(`${GHL}/users/${req.params.userId}`, { headers: ghlHeaders() });
     const data = await r.json();
     res.status(r.status).json(data);
   } catch (err) {
@@ -82,43 +325,19 @@ app.post('/api/contacts/upsert', async (req, res) => {
   }
 });
 
-// ── POST /api/opportunities ───────────────────────────────
-app.post('/api/opportunities', async (req, res) => {
+// ── POST /api/save-booking ────────────────────────────────
+app.post('/api/save-booking', (req, res) => {
   try {
-    const r = await fetch(`${GHL}/opportunities/`, {
-      method:  'POST',
-      headers: ghlHeaders(),
-      body:    JSON.stringify({
-        locationId:      process.env.GHL_LOCATION_ID,
-        pipelineId:      process.env.GHL_PIPELINE_ID,
-        pipelineStageId: process.env.GHL_STAGE_ID,
-        ...req.body,
-      }),
-    });
-    const data = await r.json();
-    res.status(r.status).json(data);
+    upsertBackupDB({ ...req.body, savedAt: new Date().toISOString() });
+    res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// ── POST /api/appointments ────────────────────────────────
-app.post('/api/appointments', async (req, res) => {
-  try {
-    const r = await fetch(`${GHL}/calendars/events/appointments`, {
-      method:  'POST',
-      headers: ghlHeaders(),
-      body:    JSON.stringify({
-        calendarId: process.env.GHL_CALENDAR_ID,
-        locationId: process.env.GHL_LOCATION_ID,
-        ...req.body,
-      }),
-    });
-    const data = await r.json();
-    res.status(r.status).json(data);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+// ── GET /api/health ───────────────────────────────────────
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString(), uptime: process.uptime() });
 });
 
 // ── POST /api/admin/login ─────────────────────────────────
@@ -140,12 +359,126 @@ app.get('/api/admin/appointments', requireAdmin, async (req, res) => {
     endTime:    req.query.endTime   || '',
   });
   try {
-    const r    = await fetch(`${GHL}/calendars/events?${params}`, { headers: ghlHeaders() });
+    const r    = await ghlFetch(`${GHL}/calendars/events?${params}`, { headers: ghlHeaders() });
     const data = await r.json();
     res.status(r.status).json(data);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+// ── GET /api/admin/backup ─────────────────────────────────
+app.get('/api/admin/backup', requireAdmin, (req, res) => {
+  res.json(readBackupDB());
+});
+
+// ── GET /api/admin/failed-bookings ────────────────────────
+app.get('/api/admin/failed-bookings', requireAdmin, (req, res) => {
+  const all = readFailedBookings();
+  res.json({
+    pendientes: all.filter(r => !r.resuelto),
+    resueltos:  all.filter(r =>  r.resuelto),
+  });
+});
+
+// ── GET /api/admin/users ──────────────────────────────────
+app.get('/api/admin/users', requireAdmin, async (req, res) => {
+  const params = new URLSearchParams({ locationId: process.env.GHL_LOCATION_ID });
+  try {
+    const r     = await ghlFetch(`${GHL}/users/?${params}`, { headers: ghlHeaders() });
+    const data  = await r.json();
+    const users = (data?.users || []).map(u => ({
+      id:    u.id,
+      name:  u.name || [u.firstName, u.lastName].filter(Boolean).join(' '),
+      email: u.email,
+    }));
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── PUT /api/admin/reassign ───────────────────────────────
+app.put('/api/admin/reassign', requireAdmin, async (req, res) => {
+  const { contactId, appointmentId, newOwnerId } = req.body || {};
+  if (!contactId || !appointmentId || !newOwnerId) {
+    return res.status(400).json({ error: 'contactId, appointmentId y newOwnerId son obligatorios' });
+  }
+
+  console.log(`Reasignando contacto ${contactId}, appointment ${appointmentId} → ${newOwnerId}`);
+
+  const warnings = [];
+  let contactOk = false;
+
+  // (a) Cambiar owner del contacto
+  try {
+    const r = await ghlFetch(`${GHL}/contacts/${contactId}`, {
+      method:  'PUT',
+      headers: ghlHeaders(),
+      body:    JSON.stringify({ assignedTo: newOwnerId }),
+    });
+    contactOk = r.ok;
+    if (!r.ok) {
+      const body = await r.text();
+      writeLog('REASIGNAR_CONTACTO', r.status, body, { email: contactId });
+    }
+  } catch (err) {
+    writeLog('REASIGNAR_CONTACTO', 0, err.message, { email: contactId });
+  }
+
+  if (!contactOk) {
+    return res.status(400).json({ error: 'No se pudo actualizar el propietario del contacto en GHL.' });
+  }
+
+  // (b) Buscar oportunidades del contacto en el pipeline y reasignarlas
+  try {
+    const searchParams = new URLSearchParams({
+      location_id: process.env.GHL_LOCATION_ID,
+      contact_id:  contactId,
+    });
+    const searchR = await ghlFetch(`${GHL}/opportunities/search?${searchParams}`, { headers: ghlHeaders() });
+    if (searchR.ok) {
+      const searchData  = await searchR.json();
+      const opps        = (searchData.opportunities || []).filter(o => o.pipelineId === process.env.GHL_PIPELINE_ID);
+      for (const opp of opps) {
+        await ghlFetch(`${GHL}/opportunities/${opp.id}`, {
+          method:  'PUT',
+          headers: ghlHeaders(),
+          body:    JSON.stringify({ assignedTo: newOwnerId }),
+        });
+      }
+      console.log(`Oportunidades reasignadas: ${opps.length}`);
+    }
+  } catch (err) {
+    warnings.push(`Oportunidad no actualizada: ${err.message}`);
+    writeLog('REASIGNAR_OPORTUNIDAD', 0, err.message, { email: contactId });
+  }
+
+  // (c) Cambiar assignee de la cita en el calendario
+  try {
+    const r = await ghlFetch(`${GHL}/calendars/events/appointments/${appointmentId}`, {
+      method:  'PUT',
+      headers: ghlHeaders(),
+      body:    JSON.stringify({ assignedUserId: newOwnerId }),
+    });
+    if (!r.ok) {
+      const body    = await r.text();
+      const errMsg  = parseGHLError(body);
+      warnings.push(`Cita no reasignada en calendario: ${errMsg}`);
+      writeLog('REASIGNAR_CITA', r.status, body, { email: appointmentId });
+    } else {
+      console.log(`Cita ${appointmentId} reasignada OK`);
+    }
+  } catch (err) {
+    warnings.push(`Error al reasignar cita: ${err.message}`);
+    writeLog('REASIGNAR_CITA', 0, err.message, { email: appointmentId });
+  }
+
+  if (warnings.length > 0) {
+    return res.json({ ok: true, warning: warnings.join(' | ') });
+  }
+
+  res.json({ ok: true });
 });
 
 const PORT = process.env.PORT || 3000;
