@@ -1,6 +1,6 @@
 {
   "name": "booking-app",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Agendamiento inteligente con GHL",
   "main": "server.js",
   "engines": {
