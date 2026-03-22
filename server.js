@@ -119,10 +119,55 @@ const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname)));
 
-// Ruta explícita para config.js (bypassa CDN cache)
+// config.js generado dinámicamente — nunca depende de archivos en disco
 app.get('/config.js', (req, res) => {
+  const CONFIG = {
+    GHL_CUSTOM_FIELD_INVERSION: '9CVYG4HZq0U94kCtvzMh',
+    GHL_CUSTOM_FIELD_NEGOCIO:   'h1zj59J1oZOOZNyXYp1v',
+    GHL_CUSTOM_FIELD_TICKET:    'IUsjyqxqr9hkaohb9q3e',
+    LAUNCH_NAME:       'Lanzamiento Marzo 2026',
+    TIMEZONE:          'Europe/Madrid',
+    SLOT_DURATION_MIN:  45,
+    SLOT_INTERVAL_MIN:  60,
+    BUFFER_BEFORE_MIN:  25,
+    BUFFER_AFTER_MIN:   25,
+    TIERS: {
+      vip: {
+        label:       'Prioritario',
+        tag:         'Prioritario',
+        inversiones: ['1000-3000', '+3000'],
+        semanas: [
+          { start: '2026-03-24', end: '2026-03-30' },
+          { start: '2026-03-31', end: '2026-04-06' },
+        ],
+      },
+      basico: {
+        label:       'Estándar',
+        tag:         'Estandar',
+        inversiones: ['0-300', '300-1000'],
+        semanas: [
+          { start: '2026-04-07', end: '2026-04-13' },
+        ],
+      },
+    },
+    HORARIO: { start: 10, end: 22 },
+    HORARIO_EXCEPCIONES: {
+      '2026-03-24': { start: 22, end: 24 },
+    },
+    CONTACT_FALLBACK: {
+      telefono: '+34 600 000 000',
+      email:    'hola@tudominio.com',
+    },
+    OPCIONES_INVERSION: [
+      { value: '0-300',     label: '0 – 300 €' },
+      { value: '300-1000',  label: '300 € – 1.000 €' },
+      { value: '1000-3000', label: '1.000 € – 3.000 €' },
+      { value: '+3000',     label: '+ 3.000 €' },
+    ],
+  };
   res.setHeader('Content-Type', 'application/javascript');
-  res.sendFile(path.join(__dirname, 'config.js'));
+  res.setHeader('Cache-Control', 'no-cache');
+  res.send(`const CONFIG = ${JSON.stringify(CONFIG)};`);
 });
 
 const GHL     = 'https://services.leadconnectorhq.com';
