@@ -47,67 +47,70 @@ function parseGHLError(bodyText) {
 }
 
 // ── FAILED BOOKINGS ───────────────────────────
+// Todas las operaciones de disco son async para no bloquear el event loop
 
-function readFailedBookings() {
-  try { return JSON.parse(fs.readFileSync(FAILED_BOOKINGS_FILE, 'utf8')); } catch (_) { return []; }
+async function readFailedBookings() {
+  try {
+    const content = await fs.promises.readFile(FAILED_BOOKINGS_FILE, 'utf8');
+    return JSON.parse(content);
+  } catch (_) { return []; }
 }
 
-function appendFailedBookingFull(data) {
-  const existing = readFailedBookings();
+async function appendFailedBookingFull(data) {
+  const existing = await readFailedBookings();
   const record = {
-    id:            crypto.randomUUID(),
-    timestamp:     new Date().toISOString(),
-    email:         data.email         || null,
-    telefono:      data.telefono      || null,
-    nombre:        data.nombre        || null,
-    apellidos:     data.apellidos     || null,
-    tier:          data.tier          || null,
-    fechaIntentada:data.fechaIntentada|| null,
-    horaIntentada: data.horaIntentada || null,
-    errorStep:     data.errorStep     || null,
-    errorCode:     data.errorCode     || 0,
-    errorMessage:  data.errorMessage  || null,
-    resuelto:      false,
+    id:             crypto.randomUUID(),
+    timestamp:      new Date().toISOString(),
+    email:          data.email          || null,
+    telefono:       data.telefono       || null,
+    nombre:         data.nombre         || null,
+    apellidos:      data.apellidos      || null,
+    tier:           data.tier           || null,
+    fechaIntentada: data.fechaIntentada || null,
+    horaIntentada:  data.horaIntentada  || null,
+    errorStep:      data.errorStep      || null,
+    errorCode:      data.errorCode      || 0,
+    errorMessage:   data.errorMessage   || null,
+    resuelto:       false,
   };
   existing.push(record);
-  try { fs.writeFileSync(FAILED_BOOKINGS_FILE, JSON.stringify(existing, null, 2)); } catch (_) {}
+  try { await fs.promises.writeFile(FAILED_BOOKINGS_FILE, JSON.stringify(existing, null, 2)); } catch (_) {}
   return record;
 }
 
-function resolveFailedBookings(email, appointmentId, fecha, hora) {
+async function resolveFailedBookings(email, appointmentId, fecha, hora) {
   if (!email) return;
-  let existing = readFailedBookings();
-  let changed  = false;
-  existing = existing.map(r => {
+  const existing = await readFailedBookings();
+  let changed = false;
+  const updated = existing.map(r => {
     if (r.email === email && !r.resuelto) {
       changed = true;
-      return {
-        ...r,
-        resuelto: true,
-        resueltoCon: { appointmentId, fecha, hora, timestamp: new Date().toISOString() },
-      };
+      return { ...r, resuelto: true, resueltoCon: { appointmentId, fecha, hora, timestamp: new Date().toISOString() } };
     }
     return r;
   });
   if (changed) {
-    try { fs.writeFileSync(FAILED_BOOKINGS_FILE, JSON.stringify(existing, null, 2)); } catch (_) {}
+    try { await fs.promises.writeFile(FAILED_BOOKINGS_FILE, JSON.stringify(updated, null, 2)); } catch (_) {}
   }
 }
 
 // ── BACKUP DB ─────────────────────────────────
 
-function readBackupDB() {
-  try { return JSON.parse(fs.readFileSync(BACKUP_DB_FILE, 'utf8')); } catch (_) { return []; }
+async function readBackupDB() {
+  try {
+    const content = await fs.promises.readFile(BACKUP_DB_FILE, 'utf8');
+    return JSON.parse(content);
+  } catch (_) { return []; }
 }
 
-function upsertBackupDB(record) {
-  const existing = readBackupDB();
+async function upsertBackupDB(record) {
+  const existing = await readBackupDB();
   const idx = record.appointmentId
     ? existing.findIndex(r => r.appointmentId === record.appointmentId)
     : -1;
   if (idx >= 0) existing[idx] = { ...existing[idx], ...record };
   else existing.push(record);
-  try { fs.writeFileSync(BACKUP_DB_FILE, JSON.stringify(existing, null, 2)); } catch (_) {}
+  try { await fs.promises.writeFile(BACKUP_DB_FILE, JSON.stringify(existing, null, 2)); } catch (_) {}
 }
 
 // ── EXPRESS ───────────────────────────────────
@@ -148,18 +151,21 @@ function requireAdmin(req, res, next) {
 }
 
 // Rate limit por IP: 200 req / 15 min
+// En STRESS_TEST_MODE se sube el límite porque todos los requests vienen de la misma IP (localhost)
+const isStressMode = process.env.STRESS_TEST_MODE === 'true';
+
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 200,
-  message: { error: 'Demasiadas peticiones. Espera un momento.' },
+  max:      isStressMode ? 10_000 : 200,
+  message:  { error: 'Demasiadas peticiones. Espera un momento.' },
 });
 
-// Rate limit global: 2000 req / 15 min
+// Rate limit global: 2000 req / 15 min (5000 en stress test)
 const globalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 2000,
+  windowMs:     15 * 60 * 1000,
+  max:          isStressMode ? 10_000 : 2000,
   keyGenerator: () => 'global',
-  message: { error: 'Servidor ocupado. Inténtalo en unos segundos.' },
+  message:      { error: 'Servidor ocupado. Inténtalo en unos segundos.' },
 });
 
 app.use('/api/', globalLimiter);
