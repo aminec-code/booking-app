@@ -688,15 +688,16 @@ async function reassignCloser(contactId, appointmentId, newOwnerId, feedbackEl) 
       if (data.warning) {
         feedbackEl.style.color = 'var(--amber, #f59e0b)';
         feedbackEl.textContent = '⚠ Parcial';
-        feedbackEl.title       = data.warning;  // tooltip con el detalle
+        showToast(data.warning, 'warning', 8000);
       } else {
         feedbackEl.style.color = 'var(--green)';
         feedbackEl.textContent = '✓ Reasignado';
+        showToast('Reasignación completada correctamente.', 'success', 3000);
       }
     } else {
       feedbackEl.style.color = 'var(--red, #ef4444)';
       feedbackEl.textContent = 'Error';
-      feedbackEl.title       = data.error || '';
+      showToast(data.error || 'No se pudo reasignar.', 'error', 8000);
     }
   } catch (_) {
     feedbackEl.style.color = 'var(--red, #ef4444)';
@@ -761,6 +762,40 @@ async function refreshData() {
     btn.disabled = false;
     btn.innerHTML = '🔄 Actualizar';
   }
+}
+
+// ── TOAST ─────────────────────────────────────
+
+function showToast(message, type = 'warning', duration = 6000) {
+  const container = document.getElementById('toast-container');
+  if (!container) return;
+
+  const colors = {
+    warning: { bg: '#fffbeb', border: '#f59e0b', icon: '⚠️', text: '#92400e' },
+    error:   { bg: '#fef2f2', border: '#ef4444', icon: '❌', text: '#991b1b' },
+    success: { bg: '#f0fdf4', border: '#22c55e', icon: '✅', text: '#166534' },
+  };
+  const c = colors[type] || colors.warning;
+
+  const toast = document.createElement('div');
+  toast.style.cssText = `
+    background:${c.bg};border:1px solid ${c.border};border-radius:10px;
+    padding:.875rem 1rem;display:flex;gap:.625rem;align-items:flex-start;
+    box-shadow:0 4px 12px rgba(0,0,0,.1);animation:slideIn .2s ease;
+  `;
+  toast.innerHTML = `
+    <span style="font-size:1.1rem;flex-shrink:0">${c.icon}</span>
+    <div style="flex:1">
+      <p style="font-size:.8rem;color:${c.text};margin:0;line-height:1.4">${escapeHtml(message)}</p>
+    </div>
+    <button onclick="this.parentElement.remove()" style="
+      background:none;border:none;cursor:pointer;color:${c.text};
+      font-size:1rem;padding:0;line-height:1;flex-shrink:0
+    ">×</button>
+  `;
+
+  container.appendChild(toast);
+  setTimeout(() => { toast.style.opacity = '0'; toast.style.transition = 'opacity .3s'; setTimeout(() => toast.remove(), 300); }, duration);
 }
 
 // ── HELPERS ───────────────────────────────────
