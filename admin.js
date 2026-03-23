@@ -582,7 +582,7 @@ function renderTable() {
     return;
   }
 
-  tbody.innerHTML = appointments.map(apt => {
+  tbody.innerHTML = appointments.map((apt, idx) => {
     const tier       = detectTier(apt);
     const tierConfig = CONFIG.TIERS[tier];
     const tierLabel  = tierConfig?.label || tier;
@@ -620,13 +620,13 @@ function renderTable() {
     ).join('');
 
     const closerCell = adminState.users.length > 0
-      ? `<td>
+      ? `<td onclick="event.stopPropagation()">
            <div style="display:flex;align-items:center;gap:.375rem">
              <select id="closer-sel-${rowId}" style="font-size:.8rem;padding:.2rem .4rem;border:1px solid var(--border);border-radius:6px;max-width:130px">
                <option value="">— Sin asignar —</option>
                ${userOptions}
              </select>
-             <button onclick="handleReassign('${escapeHtml(apt.contactId||'')}','${escapeHtml(apt.appointmentId||apt.id||'')}','${rowId}')"
+             <button onclick="event.stopPropagation();handleReassign('${escapeHtml(apt.contactId||'')}','${escapeHtml(apt.appointmentId||apt.id||'')}','${rowId}')"
                style="font-size:.75rem;padding:.2rem .5rem;background:var(--blue);color:#fff;border:none;border-radius:6px;cursor:pointer">
                OK
              </button>
@@ -636,7 +636,9 @@ function renderTable() {
       : `<td>—</td>`;
 
     return `
-      <tr>
+      <tr style="cursor:pointer" title="Ver detalle del lead"
+          onclick="openLeadModal(adminState.filtered[${idx}])"
+          onmouseenter="this.style.background='#F8F9FA'" onmouseleave="this.style.background=''">
         <td class="td-name">${escapeHtml(name)}</td>
         <td class="td-email">${escapeHtml(email)}</td>
         <td>${escapeHtml(inv)}</td>
@@ -800,3 +802,124 @@ function escapeHtml(str) {
     .replace(/"/g,  '&quot;')
     .replace(/'/g,  '&#039;');
 }
+
+// ── MODAL DETALLE LEAD ────────────────────────
+
+function openLeadModal(apt) {
+  const overlay = document.getElementById('lead-modal-overlay');
+  if (!overlay) return;
+
+  const name  = apt.title || `${apt.firstName || ''} ${apt.lastName || ''}`.trim() || '—';
+  const email = apt.email || '—';
+  const score = calcularScore(apt);
+
+  // Header
+  document.getElementById('modal-lead-name').textContent  = name;
+  document.getElementById('modal-lead-email').textContent = email;
+  document.getElementById('modal-score-badge').innerHTML  = scoreBadge(score);
+
+  // ── Contacto ──────────────────────────────
+  const phone     = apt.phone || apt.telefono || '—';
+  const instagram = apt.instagram ? `@${apt.instagram}` : (apt.contactFields?.instagram ? `@${apt.contactFields.instagram}` : '—');
+  const prioridad = apt.prioridad || apt.tier || '—';
+  const prioridadLabel = CONFIG.SCORING?.etiquetas?.[prioridad] || prioridad;
+
+  document.getElementById('modal-contact-rows').innerHTML = [
+    modalRow('📱', 'Teléfono',   phone),
+    modalRow('📸', 'Instagram',  instagram),
+    modalRow('🎯', 'Prioridad',  prioridadLabel),
+    modalRow('📊', 'Score',      `${score}/100`),
+  ].join('');
+
+  // ── Cita ──────────────────────────────────
+  const dateKey  = getAppointmentDate(apt);
+  const dateStr  = dateKey
+    ? new Date(dateKey + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+    : '—';
+  const rawTime  = apt.startTime || apt.start || '';
+  const timeStr  = rawTime
+    ? new Date(rawTime).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', timeZone: CONFIG.TIMEZONE })
+    : '—';
+  const zonaHoraria = apt.zonaHoraria || apt.leadMeta?.zonaHoraria || CONFIG.TIMEZONE;
+  const bookedAt    = formatBookedAt(apt.bookedAt || apt.timestamp);
+  const closer      = adminState.users.find(u => u.id === getAssignedUserId(apt));
+
+  document.getElementById('modal-cita-rows').innerHTML = [
+    modalRow('📅', 'Fecha',    dateStr),
+    modalRow('🕐', 'Hora',     `${timeStr} (Madrid)`),
+    modalRow('🌍', 'Zona cliente', zonaHoraria),
+    modalRow('⏱', 'Agendó',   bookedAt),
+    modalRow('👤', 'Closer',   closer ? closer.name : (getAssignedUserId(apt) || '—')),
+  ].join('');
+
+  // ── Quiz responses ────────────────────────
+  const quizContainer = document.getElementById('modal-quiz-rows');
+  const quizResponses = apt.quizResponses || apt.leadMeta?.quizResponses || {};
+  const quizItems = (CONFIG.QUIZ || []).map((q, i) => {
+    const respValue = quizResponses[q.id];
+    const opcion    = q.opciones?.find(o => o.value === respValue);
+    const label     = opcion ? opcion.label : (respValue || '—');
+    const hasResp   = !!respValue;
+    return `
+      <div style="
+        display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:start;
+        padding:8px 10px;background:${hasResp ? '#F8F9FA' : '#FFF'};
+        border-radius:8px;border:1px solid #E9ECEF;
+      ">
+        <p style="font-size:.8rem;color:#6B7280;margin:0;line-height:1.4">
+          <span style="font-weight:700;color:#9CA3AF">Q${i + 1}</span>
+          ${escapeHtml(q.pregunta)}
+        </p>
+        <p style="font-size:.85rem;font-weight:600;color:${hasResp ? '#0D1B2A' : '#9CA3AF'};margin:0;line-height:1.4;text-align:right">
+          ${escapeHtml(label)}
+          ${opcion?.score != null ? `<span style="font-size:.75rem;color:#9CA3AF;font-weight:400"> (+${opcion.score})</span>` : ''}
+        </p>
+      </div>
+    `;
+  });
+  quizContainer.innerHTML = quizItems.length > 0 ? quizItems.join('') : '<p style="color:#9CA3AF;font-size:.85rem">Sin respuestas registradas</p>';
+
+  // ── IDs técnicos ──────────────────────────
+  const ids = [
+    apt.contactId     && `<span style="font-size:.75rem;color:#9CA3AF">contactId: <code style="background:#F3F4F6;padding:1px 5px;border-radius:4px">${escapeHtml(apt.contactId)}</code></span>`,
+    apt.appointmentId && `<span style="font-size:.75rem;color:#9CA3AF">appointmentId: <code style="background:#F3F4F6;padding:1px 5px;border-radius:4px">${escapeHtml(apt.appointmentId)}</code></span>`,
+    apt.opportunityId && `<span style="font-size:.75rem;color:#9CA3AF">opportunityId: <code style="background:#F3F4F6;padding:1px 5px;border-radius:4px">${escapeHtml(apt.opportunityId)}</code></span>`,
+  ].filter(Boolean);
+
+  document.getElementById('modal-ids').innerHTML = ids.length > 0
+    ? `<div style="display:flex;flex-wrap:wrap;gap:8px">${ids.join('')}</div>`
+    : '';
+
+  overlay.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeLeadModal(e) {
+  if (e && e.target !== document.getElementById('lead-modal-overlay')) return;
+  const overlay = document.getElementById('lead-modal-overlay');
+  if (overlay) overlay.classList.add('hidden');
+  document.body.style.overflow = '';
+}
+
+function modalRow(icon, label, value) {
+  return `
+    <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:7px">
+      <span style="font-size:.9rem;flex-shrink:0">${icon}</span>
+      <div>
+        <span style="font-size:.75rem;color:#9CA3AF">${escapeHtml(label)}</span>
+        <p style="font-size:.85rem;font-weight:600;color:#0D1B2A;margin:0;line-height:1.3">${escapeHtml(String(value))}</p>
+      </div>
+    </div>
+  `;
+}
+
+// Cerrar con Escape
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    const overlay = document.getElementById('lead-modal-overlay');
+    if (overlay && !overlay.classList.contains('hidden')) {
+      overlay.classList.add('hidden');
+      document.body.style.overflow = '';
+    }
+  }
+});
