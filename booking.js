@@ -1,157 +1,107 @@
 // ─────────────────────────────────────────────
-//  BOOKING.JS  —  Flujo de reserva (4 pasos)
-//  Bloque 1 → Bloque 2 → Calendario → Confirmado
+//  BOOKING.JS  —  Flujo de reserva v2
+//  Contacto → Quiz (9 preguntas) → Calendario → Confirmación
 // ─────────────────────────────────────────────
 
 // ── ESTADO GLOBAL ────────────────────────────
+
 const bookingState = {
-  // Pasos internos: 'b1' | 'b2' | 'cal' | 'done'
-  step: 'b1',
+  // Paso actual: 'contacto' | 'quiz' | 'calendario' | 'confirmacion'
+  paso: 'contacto',
 
-  // Bloque 1
-  nombre:      '',
-  apellidos:   '',
-  telefono:    '',
-  email:       '',
-  negocio:     '',
-  ticketMedio: '',
-  margen:      '',
-  facturacion: '',
-  inversion:   '',
-  tier:        null,   // calculado silenciosamente, nunca mostrado
+  // Contacto
+  nombre:    '',
+  apellidos: '',
+  email:     '',
+  telefono:  '',
+  instagram: '',
 
-  // Bloque 2
-  clientesLlegan: [],   // array (checkboxes)
-  frena:          '',
-  instagram:      '',
-  publicaRedes:   '',
-  cierraVentas:   '',
-  sistemaClientes:'',
-  tiempoEmpezar:  '',
-  decisor:        '',
+  // Quiz
+  quizIndex:     0,          // pregunta actual (0-8)
+  quizResponses: {},         // { q1_negocio: 'saas', q2_ticket: '+500', ... }
+  quizScore:     0,          // puntuación normalizada (0-100)
+  prioridad:     null,       // 'maxima' | 'media' | 'baja'
 
   // Calendario
   fechaSeleccionada: null,
   slotSeleccionado:  null,
+  zonaHoraria:       Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Madrid',
 
-  // IDs de GHL
+  // GHL
   contactId:      null,
   opportunityId:  null,
   appointmentId:  null,
+  assignedUserId: null,
+  closerNombre:   null,
+
+  // Meta
+  bookedAt: null,
 };
+
+const TOTAL_PASOS = 11; // 1 contacto + 9 quiz + 1 calendario
 
 // ── INIT ─────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', () => {
-  initBlock1();
-  initBlock2();
+  initContacto();
   initCalendarStep();
-  showStep('b1');
-  updateDots('b1');
+  showScreen('contacto');
 });
 
-// ── STEP DOTS ─────────────────────────────────
+// ── BARRA DE PROGRESO ─────────────────────────
 
-function updateDots(step) {
-  // dot4-1 = Bloque 1, dot4-2 = Bloque 2, dot4-3 = Calendario, dot4-4 = Confirmado
-  const order = ['b1', 'b2', 'cal', 'done'];
-  const idx   = order.indexOf(step); // 0..3
-
-  [1, 2, 3, 4].forEach(n => {
-    const dot  = document.getElementById(`dot4-${n}`);
-    const line = document.getElementById(`line4-${n}`);
-    const pos  = n - 1; // 0..3
-    if (dot) {
-      dot.classList.remove('active', 'done');
-      if (pos < idx)  dot.classList.add('done');
-      if (pos === idx) dot.classList.add('active');
-    }
-    if (line) {
-      line.classList.toggle('done', pos < idx);
-    }
-  });
+function updateProgress(pasoNum) {
+  const pct = Math.round((pasoNum / TOTAL_PASOS) * 100);
+  const bar = document.getElementById('progress-bar');
+  const txt = document.getElementById('progress-text');
+  if (bar) bar.style.width = `${pct}%`;
+  if (txt) txt.textContent = `Paso ${pasoNum} de ${TOTAL_PASOS}`;
 }
 
-// ── MOSTRAR SECCIÓN ───────────────────────────
+// ── NAVEGACIÓN DE PANTALLAS ─────────────────
 
-function showStep(step) {
-  const map = {
-    b1:   'step-1',
-    b2:   'step-block2',
-    cal:  'step-2',
-    done: 'step-3',
-  };
-
-  Object.values(map).forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.classList.add('hidden');
+function showScreen(nombre, direction = 'forward') {
+  document.querySelectorAll('.screen').forEach(s => {
+    s.classList.remove('slide-in', 'slide-in-reverse');
+    s.classList.add('hidden');
   });
 
-  const target = document.getElementById(map[step]);
+  const target = document.getElementById(`screen-${nombre}`);
   if (target) {
     target.classList.remove('hidden');
-    target.classList.add('block-enter');
-    setTimeout(() => target.classList.remove('block-enter'), 300);
-    // Scroll suave al top
+    const animClass = direction === 'back' ? 'slide-in-reverse' : 'slide-in';
+    target.classList.add(animClass);
+    setTimeout(() => target.classList.remove(animClass), 300);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  bookingState.step = step;
-  updateDots(step);
+  bookingState.paso = nombre;
 }
 
 // ═══════════════════════════════════════════
-//  BLOQUE 1
+//  PASO 1 — CONTACTO
 // ═══════════════════════════════════════════
 
-function initBlock1() {
-  // Inputs de texto
-  const textFields = ['nombre', 'apellidos', 'email', 'negocio', 'ticket-medio', 'margen', 'facturacion'];
-  textFields.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.addEventListener('input', () => { validateBlock1(); updateB1Progress(); });
+function initContacto() {
+  ['nombre', 'apellidos', 'email', 'telefono', 'instagram'].forEach(id => {
+    document.getElementById(id)?.addEventListener('input', validateContacto);
   });
-
-  // Teléfono
-  const tel = document.getElementById('telefono');
-  if (tel) tel.addEventListener('input', () => { validateBlock1(); updateB1Progress(); });
-
-  // Radio inversión
-  document.querySelectorAll('input[name="inversion"]').forEach(radio => {
-    radio.addEventListener('change', () => {
-      bookingState.inversion = radio.value;
-      highlightSelectedRadio('inversion-group');
-      validateBlock1();
-      updateB1Progress();
-    });
-  });
-
-  // Estilos hover para radio options
-  stylizeRadioGroup('inversion-group');
-
-  // Botón siguiente bloque 1
-  const btn = document.getElementById('btn-block1');
-  if (btn) btn.addEventListener('click', goToBlock2);
+  document.getElementById('btn-contacto')?.addEventListener('click', goToQuiz);
 }
 
-function validateBlock1() {
-  const nombre      = document.getElementById('nombre')?.value.trim();
-  const apellidos   = document.getElementById('apellidos')?.value.trim();
-  const email       = document.getElementById('email')?.value.trim();
-  const tel         = document.getElementById('telefono')?.value.trim();
-  const negocio     = document.getElementById('negocio')?.value.trim();
-  const ticket      = document.getElementById('ticket-medio')?.value.trim();
-  const margen      = document.getElementById('margen')?.value.trim();
-  const facturacion = document.getElementById('facturacion')?.value.trim();
-  const inversion   = bookingState.inversion;
+function validateContacto() {
+  const nombre    = document.getElementById('nombre')?.value.trim();
+  const apellidos = document.getElementById('apellidos')?.value.trim();
+  const email     = document.getElementById('email')?.value.trim();
+  const tel       = document.getElementById('telefono')?.value.trim();
+  const instagram = document.getElementById('instagram')?.value.trim();
 
   const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email || '');
   const telOk   = (tel || '').length >= 6;
 
-  const valid = nombre && apellidos && emailOk && telOk &&
-                negocio && ticket && margen && facturacion && inversion;
+  const valid = nombre && apellidos && emailOk && telOk && instagram;
 
-  const btn = document.getElementById('btn-block1');
+  const btn = document.getElementById('btn-contacto');
   if (btn) btn.disabled = !valid;
 
   showFieldError('email-error',    email && !emailOk ? 'Introduce un email válido' : '');
@@ -160,184 +110,166 @@ function validateBlock1() {
   return !!valid;
 }
 
-function updateB1Progress() {
-  const fields = [
-    document.getElementById('nombre')?.value.trim(),
-    document.getElementById('apellidos')?.value.trim(),
-    document.getElementById('email')?.value.trim(),
-    document.getElementById('telefono')?.value.trim(),
-    document.getElementById('negocio')?.value.trim(),
-    document.getElementById('ticket-medio')?.value.trim(),
-    document.getElementById('margen')?.value.trim(),
-    document.getElementById('facturacion')?.value.trim(),
-    bookingState.inversion,
-  ];
-  const filled = fields.filter(Boolean).length;
-  const total  = fields.length;
-  const pct    = Math.round((filled / total) * 100);
+function goToQuiz() {
+  if (!validateContacto()) return;
 
-  const bar   = document.getElementById('b1-progress');
-  const label = document.getElementById('b1-progress-label');
-  if (bar)   bar.style.width  = `${pct}%`;
-  if (label) label.textContent = `${filled} / ${total}`;
-}
-
-function goToBlock2() {
-  if (!validateBlock1()) return;
-
-  // Sincronizar estado
   const prefix = document.getElementById('telefono-prefix')?.value || '+34';
-  bookingState.nombre      = document.getElementById('nombre')?.value.trim()        || '';
-  bookingState.apellidos   = document.getElementById('apellidos')?.value.trim()     || '';
-  bookingState.email       = document.getElementById('email')?.value.trim()         || '';
-  bookingState.telefono    = prefix + document.getElementById('telefono')?.value.trim();
-  bookingState.negocio     = document.getElementById('negocio')?.value.trim()       || '';
-  bookingState.ticketMedio = document.getElementById('ticket-medio')?.value.trim()  || '';
-  bookingState.margen      = document.getElementById('margen')?.value.trim()        || '';
-  bookingState.facturacion = document.getElementById('facturacion')?.value.trim()   || '';
+  bookingState.nombre    = document.getElementById('nombre')?.value.trim()    || '';
+  bookingState.apellidos = document.getElementById('apellidos')?.value.trim() || '';
+  bookingState.email     = document.getElementById('email')?.value.trim()     || '';
+  bookingState.telefono  = prefix + document.getElementById('telefono')?.value.trim();
+  bookingState.instagram = document.getElementById('instagram')?.value.trim() || '';
 
-  // Tier: calculado silenciosamente
-  bookingState.tier = calcTier(bookingState.inversion);
+  bookingState.quizIndex     = 0;
+  bookingState.quizResponses = {};
 
-  showStep('b2');
+  showScreen('quiz');
+  renderQuizQuestion();
+  updateProgress(2);
 }
 
 // ═══════════════════════════════════════════
-//  BLOQUE 2
+//  PASOS 2-10 — QUIZ
 // ═══════════════════════════════════════════
 
-function initBlock2() {
-  // Checkboxes clientes llegan
-  document.querySelectorAll('input[name="clientes"]').forEach(cb => {
-    cb.addEventListener('change', () => {
-      syncCheckboxes('clientes');
-      validateBlock2();
-      updateB2Progress();
-    });
-  });
-  stylizeCheckGroup('clientes-llegan-group');
+function renderQuizQuestion() {
+  const idx      = bookingState.quizIndex;
+  const pregunta = CONFIG.QUIZ[idx];
+  const total    = CONFIG.QUIZ.length;
 
-  // Radios restantes
-  ['frena', 'publica', 'cierra', 'sistema', 'tiempo', 'decisor'].forEach(name => {
-    document.querySelectorAll(`input[name="${name}"]`).forEach(radio => {
-      radio.addEventListener('change', () => {
-        highlightSelectedRadio(`${name}-group`);
-        validateBlock2();
-        updateB2Progress();
+  updateProgress(2 + idx);
 
-        // Campo extra para "Otro" en frena
-        if (name === 'frena') {
-          const otroInput = document.getElementById('frena-otro-input');
-          if (otroInput) {
-            const isOtro = radio.value === '__otro__';
-            otroInput.classList.toggle('hidden', !isOtro);
-            if (isOtro) otroInput.focus();
-          }
-        }
-      });
-    });
-    stylizeRadioGroup(`${name}-group`);
-  });
+  const numEl  = document.getElementById('quiz-num');
+  const txtEl  = document.getElementById('quiz-pregunta');
+  const optsEl = document.getElementById('quiz-opciones');
 
-  // Input frena-otro
-  document.getElementById('frena-otro-input')?.addEventListener('input', () => {
-    validateBlock2();
-    updateB2Progress();
-  });
+  if (numEl)  numEl.textContent  = `Pregunta ${idx + 1} de ${total}`;
+  if (txtEl)  txtEl.textContent  = pregunta.pregunta;
 
-  // Instagram
-  document.getElementById('instagram')?.addEventListener('input', () => {
-    validateBlock2();
-    updateB2Progress();
-  });
+  if (optsEl) {
+    optsEl.innerHTML = pregunta.opciones.map(opcion => `
+      <div class="quiz-option" data-value="${escapeHtml(opcion.value)}"
+           onclick="seleccionarOpcion('${escapeHtml(pregunta.id)}', '${escapeHtml(opcion.value)}')">
+        <span class="opcion-label">${escapeHtml(opcion.label)}</span>
+      </div>
+    `).join('');
 
-  // Botón siguiente bloque 2
-  document.getElementById('btn-block2')?.addEventListener('click', goToCalendar);
+    // Restaurar selección previa si el usuario vuelve atrás
+    const prevRespuesta = bookingState.quizResponses[pregunta.id];
+    if (prevRespuesta) {
+      const prevEl = optsEl.querySelector(`[data-value="${prevRespuesta}"]`);
+      if (prevEl) prevEl.classList.add('selected');
+    }
+  }
 
-  // Botón volver
-  document.getElementById('btn-back-b2')?.addEventListener('click', () => showStep('b1'));
+  // Botón atrás
+  const backBtn = document.getElementById('btn-quiz-back');
+  if (backBtn) {
+    backBtn.onclick = () => {
+      if (idx === 0) {
+        showScreen('contacto', 'back');
+        updateProgress(1);
+      } else {
+        bookingState.quizIndex--;
+        renderQuizQuestion();
+      }
+    };
+  }
 }
 
-function validateBlock2() {
-  const clientesLlegan = getChecked('clientes');
-  const frena          = getRadioValue('frena');
-  const frenaOtroInput = document.getElementById('frena-otro-input');
-  const frenaOk        = frena && (frena !== '__otro__' || (frenaOtroInput?.value.trim()));
-  const instagram      = document.getElementById('instagram')?.value.trim();
-  const publica        = getRadioValue('publica');
-  const cierra         = getRadioValue('cierra');
-  const sistema        = getRadioValue('sistema');
-  const tiempo         = getRadioValue('tiempo');
-  const decisor        = getRadioValue('decisor');
+function seleccionarOpcion(preguntaId, valor) {
+  bookingState.quizResponses[preguntaId] = valor;
 
-  const valid = clientesLlegan.length > 0 && frenaOk && instagram &&
-                publica && cierra && sistema && tiempo && decisor;
+  // Marcar visualmente
+  const optsEl = document.getElementById('quiz-opciones');
+  if (optsEl) {
+    optsEl.querySelectorAll('.quiz-option').forEach(el => el.classList.remove('selected'));
+    optsEl.querySelector(`[data-value="${valor}"]`)?.classList.add('selected');
+  }
 
-  const btn = document.getElementById('btn-block2');
-  if (btn) btn.disabled = !valid;
-  return !!valid;
+  // Avanzar tras 300ms
+  setTimeout(() => {
+    const siguienteIdx = bookingState.quizIndex + 1;
+    if (siguienteIdx < CONFIG.QUIZ.length) {
+      bookingState.quizIndex = siguienteIdx;
+      renderQuizQuestion();
+    } else {
+      // Quiz completo → calcular score y pasar al calendario
+      const { score, prioridad } = calcularScoreYPrioridad();
+      console.log(`[Quiz] Score: ${score} → Prioridad: ${prioridad}`);
+      goToCalendario();
+    }
+  }, 300);
 }
 
-function updateB2Progress() {
-  const frena         = getRadioValue('frena');
-  const frenaOtroVal  = document.getElementById('frena-otro-input')?.value.trim();
-  const frenaFilled   = frena && (frena !== '__otro__' || frenaOtroVal);
+// ── SCORING ────────────────────────────────
 
-  const fields = [
-    getChecked('clientes').length > 0 ? '✓' : '',
-    frenaFilled                        ? '✓' : '',
-    document.getElementById('instagram')?.value.trim(),
-    getRadioValue('publica'),
-    getRadioValue('cierra'),
-    getRadioValue('sistema'),
-    getRadioValue('tiempo'),
-    getRadioValue('decisor'),
-  ];
-  const filled = fields.filter(Boolean).length;
-  const total  = fields.length;
-  const pct    = Math.round((filled / total) * 100);
+function calcularScoreYPrioridad() {
+  let score = 0;
+  const responses = bookingState.quizResponses;
 
-  const bar   = document.getElementById('b2-progress');
-  const label = document.getElementById('b2-progress-label');
-  if (bar)   bar.style.width   = `${pct}%`;
-  if (label) label.textContent = `${filled} / ${total}`;
+  CONFIG.QUIZ.forEach(pregunta => {
+    const respuesta = responses[pregunta.id];
+    if (respuesta) {
+      const opcion = pregunta.opciones.find(o => o.value === respuesta);
+      if (opcion) score += opcion.score;
+    }
+  });
+
+  // Normaliza a 0-100
+  const scoreNormalizado = Math.round(
+    (score / CONFIG.SCORE_MAXIMO_POSIBLE) * 100
+  );
+
+  let prioridad;
+  if (scoreNormalizado >= CONFIG.SCORING.umbrales.maxima) {
+    prioridad = 'maxima';
+  } else if (scoreNormalizado >= CONFIG.SCORING.umbrales.media) {
+    prioridad = 'media';
+  } else {
+    prioridad = 'baja';
+  }
+
+  bookingState.quizScore = scoreNormalizado;
+  bookingState.prioridad = prioridad;
+
+  return { score: scoreNormalizado, prioridad };
 }
 
-function goToCalendar() {
-  if (!validateBlock2()) return;
+// ═══════════════════════════════════════════
+//  PASO 11 — CALENDARIO
+// ═══════════════════════════════════════════
 
-  // Sincronizar bloque 2
-  const frenaVal = getRadioValue('frena');
-  bookingState.frena = frenaVal === '__otro__'
-    ? (document.getElementById('frena-otro-input')?.value.trim() || 'Otro')
-    : frenaVal;
-
-  bookingState.clientesLlegan  = getChecked('clientes');
-  bookingState.instagram       = document.getElementById('instagram')?.value.trim() || '';
-  bookingState.publicaRedes    = getRadioValue('publica');
-  bookingState.cierraVentas    = getRadioValue('cierra');
-  bookingState.sistemaClientes = getRadioValue('sistema');
-  bookingState.tiempoEmpezar   = getRadioValue('tiempo');
-  bookingState.decisor         = getRadioValue('decisor');
-
-  // Limpiar selección previa del calendario
+function goToCalendario() {
   bookingState.fechaSeleccionada = null;
   bookingState.slotSeleccionado  = null;
+
   const slotsContainer = document.getElementById('slots-container');
   if (slotsContainer) slotsContainer.classList.add('hidden');
   const btnConfirm = document.getElementById('btn-confirm');
   if (btnConfirm) btnConfirm.disabled = true;
 
-  showStep('cal');
-  initCalendar(bookingState.tier, onDateSelected);
+  showScreen('calendario');
+  updateProgress(11);
+  initCalendar(bookingState.prioridad, onDateSelected);
 }
 
-// ═══════════════════════════════════════════
-//  PASO CALENDARIO
-// ═══════════════════════════════════════════
+function onTimezoneChange(tz) {
+  bookingState.zonaHoraria      = tz;
+  bookingState.slotSeleccionado = null;
+  const btnConfirm = document.getElementById('btn-confirm');
+  if (btnConfirm) btnConfirm.disabled = true;
+  if (bookingState.fechaSeleccionada) {
+    renderSlots(bookingState.fechaSeleccionada, onSlotSelected);
+  }
+}
 
 function initCalendarStep() {
-  document.getElementById('btn-back')?.addEventListener('click', () => showStep('b2'));
+  document.getElementById('btn-back-cal')?.addEventListener('click', () => {
+    bookingState.quizIndex = CONFIG.QUIZ.length - 1;
+    showScreen('quiz', 'back');
+    renderQuizQuestion();
+  });
   document.getElementById('btn-confirm')?.addEventListener('click', confirmBooking);
 }
 
@@ -364,7 +296,6 @@ async function confirmBooking() {
 
   showLoadingState();
 
-  // Aviso si tarda más de 8 segundos
   const slowTimer = setTimeout(() => {
     setLoadingStatus('Estamos registrando tu cita, no cierres esta ventana…');
   }, 8000);
@@ -382,6 +313,7 @@ async function confirmBooking() {
     const closerName = await ghlGetUserName(result.assignedUserId);
 
     clearTimeout(slowTimer);
+    bookingState.bookedAt = new Date().toISOString();
     saveBookingToStorage();
     renderConfirmation(closerName);
 
@@ -394,10 +326,10 @@ async function confirmBooking() {
 // ── ESTADOS DE CARGA / ERROR ─────────────────
 
 function showLoadingState() {
-  const step2 = document.getElementById('step-2');
-  if (!step2) return;
-  step2._originalContent = step2.innerHTML;
-  step2.innerHTML = `
+  const cal = document.getElementById('screen-calendario');
+  if (!cal) return;
+  cal._originalContent = cal.innerHTML;
+  cal.innerHTML = `
     <div class="loading-overlay">
       <div class="spinner spinner-blue spinner-lg"></div>
       <div>
@@ -414,9 +346,9 @@ function setLoadingStatus(msg) {
 }
 
 function showErrorState(_errorMsg, errorCode = null) {
-  const step2 = document.getElementById('step-2');
-  if (!step2) return;
-  step2.innerHTML = `
+  const cal = document.getElementById('screen-calendario');
+  if (!cal) return;
+  cal.innerHTML = `
     <div style="padding:2rem 0;text-align:center">
       <div style="font-size:2.5rem;margin-bottom:1rem">⚠️</div>
       <h2 style="font-family:'Syne',sans-serif;font-weight:700;font-size:1.25rem;margin-bottom:.75rem;color:var(--text)">
@@ -438,21 +370,29 @@ function showErrorState(_errorMsg, errorCode = null) {
       </p>
       <div style="display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap">
         <button class="btn btn-primary" id="btn-retry">Reintentar</button>
-        <button class="btn btn-ghost" id="btn-back-error">Volver al calendario</button>
+        <button class="btn btn-ghost"   id="btn-back-error">Volver al calendario</button>
       </div>
     </div>
   `;
 
-  document.getElementById('btn-retry')?.addEventListener('click', () => {
-    if (step2._originalContent) step2.innerHTML = step2._originalContent;
-    initCalendar(bookingState.tier, onDateSelected);
-    document.getElementById('btn-back')?.addEventListener('click', () => showStep('b2'));
+  const restoreCalendar = () => {
+    if (cal._originalContent) cal.innerHTML = cal._originalContent;
+    initCalendar(bookingState.prioridad, onDateSelected);
+    document.getElementById('btn-back-cal')?.addEventListener('click', () => {
+      bookingState.quizIndex = CONFIG.QUIZ.length - 1;
+      showScreen('quiz', 'back');
+      renderQuizQuestion();
+    });
     document.getElementById('btn-confirm')?.addEventListener('click', confirmBooking);
+  };
+
+  document.getElementById('btn-retry')?.addEventListener('click', () => {
+    restoreCalendar();
     if (bookingState.fechaSeleccionada) {
       renderSlots(bookingState.fechaSeleccionada, onSlotSelected).then(() => {
         if (bookingState.slotSeleccionado) {
-          const slotEl = document.querySelector(`.slot[data-time="${bookingState.slotSeleccionado}"]`);
-          slotEl?.classList.add('slot-selected');
+          document.querySelector(`.slot[data-time="${bookingState.slotSeleccionado}"]`)
+            ?.classList.add('slot-selected');
           const btnConfirm = document.getElementById('btn-confirm');
           if (btnConfirm) btnConfirm.disabled = false;
         }
@@ -460,12 +400,7 @@ function showErrorState(_errorMsg, errorCode = null) {
     }
   });
 
-  document.getElementById('btn-back-error')?.addEventListener('click', () => {
-    if (step2._originalContent) step2.innerHTML = step2._originalContent;
-    initCalendar(bookingState.tier, onDateSelected);
-    document.getElementById('btn-back')?.addEventListener('click', () => showStep('b2'));
-    document.getElementById('btn-confirm')?.addEventListener('click', confirmBooking);
-  });
+  document.getElementById('btn-back-error')?.addEventListener('click', restoreCalendar);
 }
 
 // ── CONFIRMACIÓN ──────────────────────────────
@@ -484,16 +419,18 @@ function renderConfirmation(closerName = null) {
     hora: slotSeleccionado,
   });
 
-  const step3 = document.getElementById('step-3');
-  if (step3) {
-    step3.innerHTML = `
+  const confirmEl = document.getElementById('screen-confirmacion');
+  if (confirmEl) {
+    confirmEl.innerHTML = `
       <div class="confirm-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+             stroke-linecap="round" stroke-linejoin="round">
           <polyline points="20 6 9 17 4 12"></polyline>
         </svg>
       </div>
 
-      <h2 style="font-family:'Syne',sans-serif;font-weight:700;font-size:1.375rem;text-align:center;margin-bottom:.5rem">
+      <h2 style="font-family:'Syne',sans-serif;font-weight:700;font-size:1.375rem;
+                 text-align:center;margin-bottom:.5rem">
         ¡Auditoría confirmada!
       </h2>
       <p style="text-align:center;color:var(--text2);font-size:.9rem;margin-bottom:1.5rem">
@@ -526,7 +463,18 @@ function renderConfirmation(closerName = null) {
           <span class="confirm-detail-icon">🕐</span>
           <div>
             <div class="confirm-detail-label">Hora</div>
-            <div class="confirm-detail-value">${slotSeleccionado} h</div>
+            ${(() => {
+              const userTz    = bookingState.zonaHoraria || 'Europe/Madrid';
+              const isMadrid  = userTz === 'Europe/Madrid';
+              const localTime = isMadrid
+                ? slotSeleccionado
+                : convertMadridSlotToTz(fechaSeleccionada, slotSeleccionado, userTz);
+              const tzLabel   = isMadrid ? '' : userTz.replace('_', ' ').split('/').pop();
+              return isMadrid
+                ? `<div class="confirm-detail-value">${slotSeleccionado} h <span style="color:var(--text3);font-size:.8rem">(Madrid)</span></div>`
+                : `<div class="confirm-detail-value">${localTime} h <span style="color:var(--text3);font-size:.8rem">(${tzLabel})</span></div>
+                   <div style="font-size:.8rem;color:var(--text3);margin-top:.2rem">Madrid: ${slotSeleccionado} h</div>`;
+            })()}
           </div>
         </div>
       </div>
@@ -539,7 +487,8 @@ function renderConfirmation(closerName = null) {
         }</span>
       </div>
 
-      <a href="${gcalUrl}" target="_blank" rel="noopener" class="btn btn-secondary btn-full" style="margin-bottom:.75rem">
+      <a href="${gcalUrl}" target="_blank" rel="noopener"
+         class="btn btn-secondary btn-full" style="margin-bottom:.75rem">
         📆 Añadir a Google Calendar
       </a>
 
@@ -550,10 +499,10 @@ function renderConfirmation(closerName = null) {
     `;
   }
 
-  showStep('done');
+  showScreen('confirmacion');
 }
 
-// ── LOCALSTORATE ─────────────────────────────
+// ── LOCALSTORAGE ─────────────────────────────
 
 const STORAGE_KEY = 'booking_app_reservas';
 
@@ -565,39 +514,28 @@ function saveBookingToStorage() {
     apellidos:         bookingState.apellidos,
     email:             bookingState.email,
     telefono:          bookingState.telefono,
-    inversion:         bookingState.inversion,
-    tier:              bookingState.tier,
-    negocio:           bookingState.negocio,
-    ticketMedio:       bookingState.ticketMedio,
-    margen:            bookingState.margen,
-    facturacion:       bookingState.facturacion,
-    clientesLlegan:    bookingState.clientesLlegan,
-    frena:             bookingState.frena,
     instagram:         bookingState.instagram,
-    publicaRedes:      bookingState.publicaRedes,
-    cierraVentas:      bookingState.cierraVentas,
-    sistemaClientes:   bookingState.sistemaClientes,
-    tiempoEmpezar:     bookingState.tiempoEmpezar,
-    decisor:           bookingState.decisor,
+    quizResponses:     bookingState.quizResponses,
+    quizScore:         bookingState.quizScore,
+    prioridad:         bookingState.prioridad,
     fechaSeleccionada: bookingState.fechaSeleccionada,
     slotSeleccionado:  bookingState.slotSeleccionado,
     contactId:         bookingState.contactId,
     opportunityId:     bookingState.opportunityId,
     appointmentId:     bookingState.appointmentId,
     assignedUserId:    bookingState.assignedUserId,
-    bookedAt:          new Date().toISOString(),
+    bookedAt:          bookingState.bookedAt,
     timestamp:         new Date().toISOString(),
     estado:            'confirmado',
   };
   existing.push(record);
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(existing)); } catch (_) {}
 
-  // Guardar también en la base de datos local del servidor (backup de seguridad)
   fetch('/api/save-booking', {
     method:  'POST',
     headers: { 'Content-Type': 'application/json' },
     body:    JSON.stringify(record),
-  }).catch(() => {}); // silencioso — no bloquea el flujo
+  }).catch(() => {});
 }
 
 function getBookingsFromStorage() {
@@ -605,87 +543,12 @@ function getBookingsFromStorage() {
   catch (_) { return []; }
 }
 
-function trackFormStart() {
-  try {
-    const starts = parseInt(localStorage.getItem('booking_form_starts') || '0', 10);
-    localStorage.setItem('booking_form_starts', String(starts + 1));
-  } catch (_) {}
-}
-
-// ── TIER (silencioso) ─────────────────────────
-
-function calcTier(inversion) {
-  for (const [key, cfg] of Object.entries(CONFIG.TIERS)) {
-    if (cfg.inversiones.includes(inversion)) return key;
-  }
-  return 'basico';
-}
-
-// ── HELPERS DE FORMULARIO ────────────────────
+// ── HELPERS ───────────────────────────────────
 
 function showFieldError(id, msg) {
   const el = document.getElementById(id);
   if (el) el.textContent = msg;
 }
-
-function getRadioValue(name) {
-  return document.querySelector(`input[name="${name}"]:checked`)?.value || '';
-}
-
-function getChecked(name) {
-  return [...document.querySelectorAll(`input[name="${name}"]:checked`)].map(el => el.value);
-}
-
-function syncCheckboxes(name) {
-  bookingState[name === 'clientes' ? 'clientesLlegan' : name] = getChecked(name);
-}
-
-/**
- * Resalta visualmente el radio seleccionado dentro de un grupo
- */
-function highlightSelectedRadio(groupId) {
-  const group = document.getElementById(groupId);
-  if (!group) return;
-  group.querySelectorAll('.radio-option').forEach(opt => {
-    const radio = opt.querySelector('input[type="radio"]');
-    opt.classList.toggle('selected', radio?.checked || false);
-  });
-}
-
-/**
- * Resalta visualmente los checkboxes seleccionados
- */
-function stylizeCheckGroup(groupId) {
-  const group = document.getElementById(groupId);
-  if (!group) return;
-  group.querySelectorAll('.check-option').forEach(opt => {
-    const cb = opt.querySelector('input[type="checkbox"]');
-    if (cb) {
-      cb.addEventListener('change', () => {
-        opt.classList.toggle('selected', cb.checked);
-      });
-    }
-  });
-}
-
-/**
- * Añade listeners de highlight a un radio group
- */
-function stylizeRadioGroup(groupId) {
-  const group = document.getElementById(groupId);
-  if (!group) return;
-  group.querySelectorAll('.radio-option').forEach(opt => {
-    const radio = opt.querySelector('input[type="radio"]');
-    if (radio) {
-      radio.addEventListener('change', () => {
-        group.querySelectorAll('.radio-option').forEach(o => o.classList.remove('selected'));
-        opt.classList.add('selected');
-      });
-    }
-  });
-}
-
-// ── ESCAPE ────────────────────────────────────
 
 function escapeHtml(str) {
   return String(str || '')

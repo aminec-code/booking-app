@@ -228,13 +228,12 @@ async function ghlGetUserName(userId) {
  * Obtiene los appointments del calendario para el dashboard admin
  */
 async function ghlGetAppointments() {
+  // Rango: desde la fecha más temprana hasta la más tardía de VENTANA_FECHAS
   let minDate = null;
   let maxDate = null;
-  Object.values(CONFIG.TIERS).forEach(tier => {
-    tier.semanas.forEach(s => {
-      if (!minDate || s.start < minDate) minDate = s.start;
-      if (!maxDate || s.end   > maxDate) maxDate = s.end;
-    });
+  Object.values(CONFIG.VENTANA_FECHAS || {}).forEach(cfg => {
+    if (!minDate || cfg.fechaInicio < minDate) minDate = cfg.fechaInicio;
+    if (!maxDate || cfg.fechaMax    > maxDate) maxDate = cfg.fechaMax;
   });
 
   if (!minDate) return [];
@@ -287,7 +286,7 @@ async function ghlAdminLogin(password) {
  * @returns {{ contactId, opportunityId, appointmentId, assignedUserId }}
  */
 async function ghlSubmitBooking(datos) {
-  const tierConfig = CONFIG.TIERS[datos.tier];
+  const tag = CONFIG.SCORING?.tags_ghl?.[datos.prioridad] || 'Estandar';
 
   // ── Calcular ISO de inicio y fin de la cita ──
   const [hh, mm] = datos.slotSeleccionado.split(':').map(Number);
@@ -301,7 +300,7 @@ async function ghlSubmitBooking(datos) {
       firstName:    datos.nombre,
       lastName:     datos.apellidos,
       phone:        datos.telefono,
-      tags:         [tierConfig?.tag || datos.tier],
+      tags:         [tag],
       customFields: buildCustomFields(datos),
     },
     opportunity: {
@@ -310,14 +309,17 @@ async function ghlSubmitBooking(datos) {
     appointment: {
       startTime:        startISO,
       endTime:          endISO,
-      selectedTimezone: CONFIG.TIMEZONE,
-      title:            `Auditoría · ${CONFIG.LAUNCH_NAME}`,
+      selectedTimezone: datos.zonaHoraria || CONFIG.TIMEZONE,
+      title:            CONFIG.APPOINTMENT_TITLE || `Auditoría · ${CONFIG.LAUNCH_NAME}`,
     },
     leadMeta: {
-      email: datos.email,
-      tier:  datos.tier,
-      fecha: datos.fechaSeleccionada,
-      hora:  datos.slotSeleccionado,
+      email:         datos.email,
+      prioridad:     datos.prioridad,
+      quizScore:     datos.quizScore,
+      quizResponses: datos.quizResponses,
+      zonaHoraria:   datos.zonaHoraria || CONFIG.TIMEZONE,
+      fecha:         datos.fechaSeleccionada,
+      hora:          datos.slotSeleccionado,
     },
   };
 
@@ -353,10 +355,15 @@ async function ghlSubmitBooking(datos) {
 // ── HELPERS ───────────────────────────────────
 
 function buildCustomFields(datos) {
+  // En v2 los valores vienen de quizResponses en lugar de campos libres
+  const inversion = datos.quizResponses?.q5_inversion || datos.inversion || '';
+  const negocio   = datos.quizResponses?.q1_negocio   || datos.negocio   || '';
+  const ticket    = datos.quizResponses?.q2_ticket     || datos.ticketMedio || '';
+
   return [
-    { id: CONFIG.GHL_CUSTOM_FIELD_INVERSION, value: datos.inversion   },
-    { id: CONFIG.GHL_CUSTOM_FIELD_NEGOCIO,   value: datos.negocio     },
-    { id: CONFIG.GHL_CUSTOM_FIELD_TICKET,    value: datos.ticketMedio },
+    { id: CONFIG.GHL_CUSTOM_FIELD_INVERSION, value: inversion },
+    { id: CONFIG.GHL_CUSTOM_FIELD_NEGOCIO,   value: negocio   },
+    { id: CONFIG.GHL_CUSTOM_FIELD_TICKET,    value: ticket    },
   ].filter(f => f.id && f.id !== '' && f.value && f.value !== '');
 }
 
@@ -380,7 +387,7 @@ function buildISOWithTimezone(fecha, hour, minute, timezone) {
   const tzHour   = parseInt(parts.hour,   10) % 24;
   const tzMinute = parseInt(parts.minute, 10);
 
-  let diffMin = (hour - tzHour) * 60 + (minute - tzMinute);
+  let diffMin = (tzHour - hour) * 60 + (tzMinute - minute);
   if (diffMin >  720) diffMin -= 1440;
   if (diffMin < -720) diffMin += 1440;
 

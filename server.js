@@ -23,7 +23,7 @@ function tsNow() {
 
 function writeLog(step, status, ghlBody, leadMeta) {
   const meta = leadMeta
-    ? `${leadMeta.email} | ${leadMeta.tier} | ${leadMeta.fecha || '?'} | ${leadMeta.hora || '?'}`
+    ? `${leadMeta.email} | ${leadMeta.prioridad || leadMeta.tier || '?'} | ${leadMeta.fecha || '?'} | ${leadMeta.hora || '?'}`
     : '—';
   const line = [
     `[${tsNow()}] ERROR en ${step}`,
@@ -65,7 +65,7 @@ async function appendFailedBookingFull(data) {
     telefono:       data.telefono       || null,
     nombre:         data.nombre         || null,
     apellidos:      data.apellidos      || null,
-    tier:           data.tier           || null,
+    prioridad:      data.prioridad       || null,
     fechaIntentada: data.fechaIntentada || null,
     horaIntentada:  data.horaIntentada  || null,
     errorStep:      data.errorStep      || null,
@@ -117,58 +117,56 @@ async function upsertBackupDB(record) {
 
 const app = express();
 app.use(express.json());
-app.use(express.static(path.join(__dirname)));
 
-// config.js generado dinámicamente — nunca depende de archivos en disco
+// config.js generado dinámicamente — antes de express.static para evitar que sirva el del disco
 app.get('/config.js', (req, res) => {
   const CONFIG = {
     GHL_CUSTOM_FIELD_INVERSION: '9CVYG4HZq0U94kCtvzMh',
     GHL_CUSTOM_FIELD_NEGOCIO:   'h1zj59J1oZOOZNyXYp1v',
     GHL_CUSTOM_FIELD_TICKET:    'IUsjyqxqr9hkaohb9q3e',
-    LAUNCH_NAME:       'Lanzamiento Marzo 2026',
+    LAUNCH_NAME:        'Lanzamiento Marzo 2026',
+    APPOINTMENT_TITLE:  'Auditoría FOCUS Consulting',
     TIMEZONE:          'Europe/Madrid',
     SLOT_DURATION_MIN:  45,
     SLOT_INTERVAL_MIN:  60,
     BUFFER_BEFORE_MIN:  25,
     BUFFER_AFTER_MIN:   25,
-    TIERS: {
-      vip: {
-        label:       'Prioritario',
-        tag:         'Prioritario',
-        inversiones: ['1000-3000', '+3000'],
-        semanas: [
-          { start: '2026-03-24', end: '2026-03-30' },
-          { start: '2026-03-31', end: '2026-04-06' },
-        ],
-      },
-      basico: {
-        label:       'Estándar',
-        tag:         'Estandar',
-        inversiones: ['0-300', '300-1000'],
-        semanas: [
-          { start: '2026-04-07', end: '2026-04-13' },
-        ],
-      },
+    SCORING: {
+      umbrales: { maxima: 75, media: 50 },
+      etiquetas: { maxima: 'Máxima Prioridad', media: 'Prioridad Media', baja: 'Baja Prioridad' },
+      tags_ghl:  { maxima: 'Maxima-Prioridad', media: 'Media-Prioridad', baja: 'Baja-Prioridad' },
+    },
+    VENTANA_FECHAS: {
+      maxima: { ventanaInicial: 4, expansion: 2, maxDias: 14, fechaInicio: '2026-03-24', fechaMax: '2026-04-06' },
+      media:  { ventanaInicial: 7, expansion: 3, maxDias: 21, fechaInicio: '2026-03-24', fechaMax: '2026-04-13' },
+      baja:   { ventanaInicial: 14, expansion: 5, maxDias: 30, fechaInicio: '2026-04-02', fechaMax: '2026-04-20' },
     },
     HORARIO: { start: 10, end: 22 },
-    HORARIO_EXCEPCIONES: {
-      '2026-03-24': { start: 22, end: 24 },
-    },
+    HORARIO_EXCEPCIONES: { '2026-03-24': { start: 22, end: 24 } },
+    QUIZ: [
+      { id: 'q1_negocio',    pregunta: '¿A qué te dedicas exactamente?',                          tipo: 'radio', opciones: [{ label: 'E-commerce / tienda online', value: 'ecommerce', score: 25 }, { label: 'Servicios / consultoría', value: 'servicios', score: 20 }, { label: 'Producto digital / SaaS', value: 'saas', score: 30 }, { label: 'Otra', value: 'otra', score: 10 }] },
+      { id: 'q2_ticket',     pregunta: '¿Cuál es tu ticket medio por cliente?',                   tipo: 'radio', opciones: [{ label: 'Más de 500€', value: '+500', score: 20 }, { label: '200€ – 500€', value: '200-500', score: 15 }, { label: '100€ – 200€', value: '100-200', score: 10 }, { label: 'Menos de 100€', value: '-100', score: 5 }] },
+      { id: 'q3_margen',     pregunta: '¿Cuál es tu margen aproximado por venta?',                tipo: 'radio', opciones: [{ label: 'Alto (más del 40%)', value: 'alto', score: 15 }, { label: 'Medio (20% – 40%)', value: 'medio', score: 10 }, { label: 'Bajo (menos del 20%)', value: 'bajo', score: 5 }] },
+      { id: 'q4_facturacion',pregunta: '¿Cuál es tu facturación anual aproximada?',               tipo: 'radio', opciones: [{ label: 'Más de 500.000€', value: '+500k', score: 25 }, { label: '200.000€ – 500.000€', value: '200-500k', score: 20 }, { label: '50.000€ – 200.000€', value: '50-200k', score: 15 }, { label: 'Menos de 50.000€', value: '-50k', score: 10 }] },
+      { id: 'q5_inversion',  pregunta: '¿Cuánto podrías invertir al mes si fuera rentable?',     tipo: 'radio', opciones: [{ label: 'Más de 3.000€', value: '+3000', score: 30 }, { label: '1.000€ – 3.000€', value: '1000-3000', score: 25 }, { label: '300€ – 1.000€', value: '300-1000', score: 15 }, { label: '0€ – 300€', value: '0-300', score: 0 }] },
+      { id: 'q6_frena',      pregunta: '¿Qué te frena más a la hora de escalar?',                 tipo: 'radio', opciones: [{ label: 'Falta de sistema / procesos', value: 'sistema', score: 25 }, { label: 'Falta de inversión en marketing', value: 'marketing', score: 25 }, { label: 'No sé por dónde empezar', value: 'inicio', score: 20 }, { label: 'Tiempo o recursos limitados', value: 'tiempo', score: 15 }] },
+      { id: 'q7_sistema',    pregunta: '¿Tienes un sistema para gestionar tus clientes?',         tipo: 'radio', opciones: [{ label: 'Sí, uso un CRM profesional', value: 'crm', score: 20 }, { label: 'Sí, pero algo básico', value: 'basico', score: 15 }, { label: 'No tengo ninguno', value: 'no', score: 0 }] },
+      { id: 'q8_tiempo',     pregunta: '¿En cuánto tiempo quieres empezar?',                      tipo: 'radio', opciones: [{ label: 'Ahora mismo', value: 'ahora', score: 30 }, { label: 'En el próximo mes', value: '1mes', score: 20 }, { label: 'En 3 meses', value: '3meses', score: 10 }, { label: 'Solo estoy explorando', value: 'explorando', score: 5 }] },
+      { id: 'q9_decisor',    pregunta: '¿Eres tú quien toma la decisión de inversión?',           tipo: 'radio', opciones: [{ label: 'Sí, la decisión es mía', value: 'si', score: 20 }, { label: 'La comparto con otra persona', value: 'compartida', score: 10 }, { label: 'No, decide otra persona', value: 'no', score: 0 }] },
+    ],
+    SCORE_MAXIMO_POSIBLE: 200,
     CONTACT_FALLBACK: {
       telefono: '+34 600 000 000',
       email:    'hola@tudominio.com',
     },
-    OPCIONES_INVERSION: [
-      { value: '0-300',     label: '0 – 300 €' },
-      { value: '300-1000',  label: '300 € – 1.000 €' },
-      { value: '1000-3000', label: '1.000 € – 3.000 €' },
-      { value: '+3000',     label: '+ 3.000 €' },
-    ],
   };
   res.setHeader('Content-Type', 'application/javascript');
   res.setHeader('Cache-Control', 'no-cache');
   res.send(`const CONFIG = ${JSON.stringify(CONFIG)};`);
 });
+
+// Archivos estáticos — después de /config.js para que no lo intercepte
+app.use(express.static(path.join(__dirname)));
 
 const GHL     = 'https://services.leadconnectorhq.com';
 const VERSION = '2021-07-28';
@@ -250,7 +248,8 @@ app.post('/api/booking', async (req, res) => {
     const fakeId = () => Math.random().toString(36).slice(2, 10);
     const record = {
       email:     contact.email,
-      tier:      leadMeta?.tier,
+      prioridad: leadMeta?.prioridad,
+      quizScore: leadMeta?.quizScore,
       fecha:     leadMeta?.fecha,
       hora:      leadMeta?.hora,
       ts:        Date.now(),

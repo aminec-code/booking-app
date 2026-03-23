@@ -487,38 +487,30 @@ function renderLineChart(byDay) {
 // ── SCORING ───────────────────────────────────
 
 function calcularScore(lead) {
-  let score = 0;
+  // Si ya viene el score normalizado del quiz, usarlo directamente
+  if (typeof lead.quizScore === 'number') return lead.quizScore;
 
-  // Inversión declarada (0-40 pts)
-  if (lead.inversion === '+3000')      score += 40;
-  else if (lead.inversion === '1000-3000') score += 30;
-  else if (lead.inversion === '300-1000')  score += 15;
+  // Fallback: recalcular desde quizResponses si existen
+  if (lead.quizResponses && CONFIG.QUIZ) {
+    let raw = 0;
+    CONFIG.QUIZ.forEach(pregunta => {
+      const respuesta = lead.quizResponses[pregunta.id];
+      if (respuesta) {
+        const opcion = pregunta.opciones.find(o => o.value === respuesta);
+        if (opcion) raw += opcion.score;
+      }
+    });
+    return Math.round((raw / CONFIG.SCORE_MAXIMO_POSIBLE) * 100);
+  }
 
-  // Es el decisor (0-20 pts)
-  if (lead.decisor === 'si')           score += 20;
-  else if (lead.decisor === 'compartido') score += 10;
-
-  // Tiempo para empezar (0-15 pts)
-  if (lead.tiempoEmpezar === 'ahora')      score += 15;
-  else if (lead.tiempoEmpezar === '1mes')  score += 10;
-  else if (lead.tiempoEmpezar === '3meses') score += 5;
-
-  // Facturación (0-15 pts)
-  if (lead.facturacion === '+100k')        score += 15;
-  else if (lead.facturacion === '50-100k') score += 10;
-  else if (lead.facturacion === '20-50k')  score += 5;
-
-  // Sistema de clientes (0-10 pts)
-  if (lead.sistemaClientes === 'si')       score += 10;
-
-  return score;
+  return 0;
 }
 
 function scoreBadge(score) {
-  if (score >= 80) return `<span class="badge badge-green">🔥 Caliente</span>`;
-  if (score >= 55) return `<span class="badge badge-blue">Interesante</span>`;
-  if (score >= 30) return `<span class="badge badge-amber">Tibio</span>`;
-  return `<span class="badge badge-gray">Frío</span>`;
+  if (score >= 75) return `<span class="badge badge-green">🔥 Máxima</span>`;
+  if (score >= 50) return `<span class="badge badge-blue">⚡ Media</span>`;
+  if (score >= 25) return `<span class="badge badge-amber">🌡 Baja</span>`;
+  return `<span class="badge badge-gray">❄ Fría</span>`;
 }
 
 function formatBookedAt(iso) {
