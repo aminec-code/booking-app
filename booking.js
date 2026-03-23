@@ -364,10 +364,21 @@ function showErrorState(_errorMsg, errorCode = null) {
       <p style="font-size:.875rem;color:var(--text);margin-bottom:1rem">
         ✉️ <strong>${escapeHtml(CONFIG.CONTACT_FALLBACK.email)}</strong>
       </p>
-      <p style="font-size:.8rem;color:var(--text3);margin-bottom:1.5rem">
+      <p style="font-size:.8rem;color:var(--text3);margin-bottom:1rem">
         Indica: <strong>${escapeHtml(bookingState.nombre)} ${escapeHtml(bookingState.apellidos)}</strong>
         · ${escapeHtml(bookingState.fechaSeleccionada)} · ${escapeHtml(bookingState.slotSeleccionado)}
       </p>
+      ${CONFIG.CONTACT_FALLBACK.calendarUrl ? `
+      <div style="margin:0 auto 1.25rem;padding:1rem 1.25rem;background:#F5EDD6;border-radius:12px;max-width:360px;border:1.5px solid #B8963E">
+        <p style="font-size:.85rem;color:#0D1B2A;margin-bottom:.75rem;line-height:1.5">
+          Parece que no tenemos disponible esta hora, pero puedes agendar tu auditoría directamente haciendo clic en el botón de abajo.
+        </p>
+        <a href="${CONFIG.CONTACT_FALLBACK.calendarUrl}" target="_blank" rel="noopener noreferrer"
+           style="display:inline-block;background:#0D1B2A;color:#fff;font-family:'Inter',sans-serif;font-weight:600;font-size:.875rem;padding:.75rem 1.5rem;border-radius:8px;text-decoration:none">
+          Agendar en calendario →
+        </a>
+      </div>
+      ` : ''}
       <div style="display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap">
         <button class="btn btn-primary" id="btn-retry">Reintentar</button>
         <button class="btn btn-ghost"   id="btn-back-error">Volver al calendario</button>

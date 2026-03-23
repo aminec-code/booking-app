@@ -175,7 +175,8 @@ const CONFIG = {
 
   // ── FALLBACK DE CONTACTO (si la confirmación falla) ──
   CONTACT_FALLBACK: {
-    telefono: '+34 600 000 000',   // ← cambia por tu número real
-    email:    'hola@tudominio.com', // ← cambia por tu email real
+    telefono:    '+34 600 000 000',   // ← cambia por tu número real
+    email:       'hola@tudominio.com', // ← cambia por tu email real
+    calendarUrl: '',                   // ← URL del calendario nativo GHL (ej: https://link.focusconsulting.com/widget/booking/...)
   },
 };

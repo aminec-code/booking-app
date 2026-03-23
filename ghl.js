@@ -320,6 +320,7 @@ async function ghlSubmitBooking(datos) {
       zonaHoraria:   datos.zonaHoraria || CONFIG.TIMEZONE,
       fecha:         datos.fechaSeleccionada,
       hora:          datos.slotSeleccionado,
+      notaLead:      buildNotaLead(datos),
     },
   };
 
@@ -353,6 +354,46 @@ async function ghlSubmitBooking(datos) {
 }
 
 // ── HELPERS ───────────────────────────────────
+
+/**
+ * Genera el texto completo de la nota que se guardará en el contacto de GHL
+ */
+function buildNotaLead(datos) {
+  const prioridadLabel = CONFIG.SCORING?.etiquetas?.[datos.prioridad] || datos.prioridad || '—';
+  const scoreNorm      = datos.quizScore != null ? `${datos.quizScore}/100` : '—';
+  const instagram      = datos.instagram ? `@${datos.instagram}` : '—';
+  const tz             = datos.zonaHoraria || CONFIG.TIMEZONE;
+
+  // Respuestas del quiz mapeadas a labels legibles
+  const quizLines = (CONFIG.QUIZ || []).map((q, i) => {
+    const respValue = datos.quizResponses?.[q.id];
+    const opcion    = q.opciones?.find(o => o.value === respValue);
+    const label     = opcion ? opcion.label : (respValue || '—');
+    return `  Q${i + 1} - ${q.pregunta}\n        → ${label}`;
+  }).join('\n');
+
+  return [
+    `📋 LEAD QUALIFICADO — ${CONFIG.APPOINTMENT_TITLE || 'Auditoría FOCUS Consulting'}`,
+    '',
+    `👤 Nombre:    ${datos.nombre} ${datos.apellidos}`,
+    `📧 Email:     ${datos.email}`,
+    `📱 Teléfono:  ${datos.telefono}`,
+    `📸 Instagram: ${instagram}`,
+    '',
+    `🎯 Prioridad: ${prioridadLabel}`,
+    `📊 Score:     ${scoreNorm}`,
+    '',
+    `📅 Cita agendada:`,
+    `     Fecha:            ${datos.fechaSeleccionada}`,
+    `     Hora (Madrid):    ${datos.slotSeleccionado}`,
+    `     Zona del cliente: ${tz}`,
+    '',
+    `❓ Respuestas del quiz:`,
+    quizLines,
+    '',
+    `⏱ Registrado: ${new Date().toLocaleString('es-ES', { timeZone: CONFIG.TIMEZONE })} (Madrid)`,
+  ].join('\n');
+}
 
 function buildCustomFields(datos) {
   // En v2 los valores vienen de quizResponses en lugar de campos libres

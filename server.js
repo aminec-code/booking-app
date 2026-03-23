@@ -156,8 +156,9 @@ app.get('/config.js', (req, res) => {
     ],
     SCORE_MAXIMO_POSIBLE: 200,
     CONTACT_FALLBACK: {
-      telefono: '+34 600 000 000',
-      email:    'hola@tudominio.com',
+      telefono:    '+34 600 000 000',
+      email:       'hola@tudominio.com',
+      calendarUrl: '',   // ← URL del calendario nativo GHL
     },
   };
   res.setHeader('Content-Type', 'application/javascript');
@@ -285,6 +286,18 @@ app.post('/api/booking', async (req, res) => {
     contactId  = data?.contact?.id || data?.id;
     if (!contactId) throw new Error('GHL no devolvió contactId');
     console.log(`${tag} Contacto OK: ${contactId}`);
+
+    // ── Nota con todos los datos del lead (best-effort, no bloquea el flujo) ──
+    if (leadMeta?.notaLead) {
+      ghlFetch(`${GHL}/contacts/${contactId}/notes`, {
+        method:  'POST',
+        headers: ghlHeaders(),
+        body:    JSON.stringify({ body: leadMeta.notaLead }),
+      }).then(r => {
+        if (r.ok) console.log(`${tag} Nota creada OK`);
+        else r.text().then(t => console.warn(`${tag} Nota fallida (${r.status}):`, t.slice(0, 200)));
+      }).catch(err => console.warn(`${tag} Nota error:`, err.message));
+    }
   } catch (err) {
     writeLog('CONTACTO', 0, err.message, leadMeta);
     appendFailedBookingFull({ ...leadMeta, fechaIntentada: leadMeta?.fecha, horaIntentada: leadMeta?.hora, errorStep: 'contact', errorCode: 0, errorMessage: err.message });
