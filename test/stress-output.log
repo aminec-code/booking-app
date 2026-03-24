@@ -1,0 +1,507 @@
+╔══════════════════════════════════════════════════════════╗
+║  STRESS TEST REAL — 500 agendas contra GHL             ║
+║  Target: https://booking-app-production-11e0.up.railway.app║
+║  Tandas: 200 → 150 → 80 → 70                          ║
+║  Concurrencia: 3 simultáneos                            ║
+╚══════════════════════════════════════════════════════════╝
+
+✅ Servidor activo
+
+📝 Generando 500 leads ficticios...
+
+════════════════════════════════════════════════════════════
+  🚀 TANDA 1: 200 agendas (67 grupos de 3)
+════════════════════════════════════════════════════════════
+   ✅ 1 OK | ❌ 0 ERR | Progreso: 1/200   ✅ 2 OK | ❌ 0 ERR | Progreso: 2/200   ✅ 3 OK | ❌ 0 ERR | Progreso: 3/200   ✅ 4 OK | ❌ 0 ERR | Progreso: 4/200   ✅ 5 OK | ❌ 0 ERR | Progreso: 5/200   ✅ 6 OK | ❌ 0 ERR | Progreso: 6/200   ✅ 7 OK | ❌ 0 ERR | Progreso: 7/200   ✅ 8 OK | ❌ 0 ERR | Progreso: 8/200   ✅ 9 OK | ❌ 0 ERR | Progreso: 9/200   ✅ 10 OK | ❌ 0 ERR | Progreso: 10/200   ✅ 11 OK | ❌ 0 ERR | Progreso: 11/200   ✅ 12 OK | ❌ 0 ERR | Progreso: 12/200   ✅ 13 OK | ❌ 0 ERR | Progreso: 13/200   ✅ 14 OK | ❌ 0 ERR | Progreso: 14/200   ✅ 15 OK | ❌ 0 ERR | Progreso: 15/200   ✅ 16 OK | ❌ 0 ERR | Progreso: 16/200   ✅ 17 OK | ❌ 0 ERR | Progreso: 17/200   ✅ 18 OK | ❌ 0 ERR | Progreso: 18/200   ✅ 19 OK | ❌ 0 ERR | Progreso: 19/200   ✅ 20 OK | ❌ 0 ERR | Progreso: 20/200   ✅ 21 OK | ❌ 0 ERR | Progreso: 21/200   ✅ 22 OK | ❌ 0 ERR | Progreso: 22/200   ✅ 23 OK | ❌ 0 ERR | Progreso: 23/200   ✅ 24 OK | ❌ 0 ERR | Progreso: 24/200   ✅ 25 OK | ❌ 0 ERR | Progreso: 25/200   ✅ 26 OK | ❌ 0 ERR | Progreso: 26/200   ✅ 27 OK | ❌ 0 ERR | Progreso: 27/200   ✅ 28 OK | ❌ 0 ERR | Progreso: 28/200   ✅ 29 OK | ❌ 0 ERR | Progreso: 29/200   ✅ 29 OK | ❌ 1 ERR | Progreso: 30/200
+   ⚠️  #29: appointment → The slot you have selected is no longer available. (1357ms)
+   ✅ 30 OK | ❌ 1 ERR | Progreso: 31/200   ✅ 31 OK | ❌ 1 ERR | Progreso: 32/200   ✅ 32 OK | ❌ 1 ERR | Progreso: 33/200   ✅ 33 OK | ❌ 1 ERR | Progreso: 34/200   ✅ 34 OK | ❌ 1 ERR | Progreso: 35/200   ✅ 35 OK | ❌ 1 ERR | Progreso: 36/200   ✅ 36 OK | ❌ 1 ERR | Progreso: 37/200   ✅ 37 OK | ❌ 1 ERR | Progreso: 38/200   ✅ 38 OK | ❌ 1 ERR | Progreso: 39/200   ✅ 39 OK | ❌ 1 ERR | Progreso: 40/200   ✅ 40 OK | ❌ 1 ERR | Progreso: 41/200   ✅ 40 OK | ❌ 2 ERR | Progreso: 42/200
+   ⚠️  #41: appointment → The slot you have selected is no longer available. (1436ms)
+   ✅ 41 OK | ❌ 2 ERR | Progreso: 43/200   ✅ 42 OK | ❌ 2 ERR | Progreso: 44/200   ✅ 43 OK | ❌ 2 ERR | Progreso: 45/200   ✅ 44 OK | ❌ 2 ERR | Progreso: 46/200   ✅ 44 OK | ❌ 3 ERR | Progreso: 47/200
+   ⚠️  #46: appointment → The slot you have selected is no longer available. (1873ms)
+   ✅ 45 OK | ❌ 3 ERR | Progreso: 48/200   ✅ 46 OK | ❌ 3 ERR | Progreso: 49/200   ✅ 47 OK | ❌ 3 ERR | Progreso: 50/200   ✅ 48 OK | ❌ 3 ERR | Progreso: 51/200   ✅ 49 OK | ❌ 3 ERR | Progreso: 52/200   ✅ 50 OK | ❌ 3 ERR | Progreso: 53/200   ✅ 51 OK | ❌ 3 ERR | Progreso: 54/200   ✅ 52 OK | ❌ 3 ERR | Progreso: 55/200   ✅ 53 OK | ❌ 3 ERR | Progreso: 56/200   ✅ 54 OK | ❌ 3 ERR | Progreso: 57/200   ✅ 55 OK | ❌ 3 ERR | Progreso: 58/200   ✅ 56 OK | ❌ 3 ERR | Progreso: 59/200   ✅ 57 OK | ❌ 3 ERR | Progreso: 60/200   ✅ 58 OK | ❌ 3 ERR | Progreso: 61/200   ✅ 59 OK | ❌ 3 ERR | Progreso: 62/200   ✅ 60 OK | ❌ 3 ERR | Progreso: 63/200   ✅ 61 OK | ❌ 3 ERR | Progreso: 64/200   ✅ 62 OK | ❌ 3 ERR | Progreso: 65/200   ✅ 62 OK | ❌ 4 ERR | Progreso: 66/200
+   ⚠️  #65: appointment → The slot you have selected is no longer available. (1386ms)
+   ✅ 63 OK | ❌ 4 ERR | Progreso: 67/200   ✅ 64 OK | ❌ 4 ERR | Progreso: 68/200   ✅ 65 OK | ❌ 4 ERR | Progreso: 69/200   ✅ 66 OK | ❌ 4 ERR | Progreso: 70/200   ✅ 66 OK | ❌ 5 ERR | Progreso: 71/200
+   ⚠️  #70: appointment → The slot you have selected is no longer available. (1829ms)
+   ✅ 67 OK | ❌ 5 ERR | Progreso: 72/200   ✅ 68 OK | ❌ 5 ERR | Progreso: 73/200   ✅ 69 OK | ❌ 5 ERR | Progreso: 74/200   ✅ 70 OK | ❌ 5 ERR | Progreso: 75/200   ✅ 71 OK | ❌ 5 ERR | Progreso: 76/200   ✅ 72 OK | ❌ 5 ERR | Progreso: 77/200   ✅ 73 OK | ❌ 5 ERR | Progreso: 78/200   ✅ 74 OK | ❌ 5 ERR | Progreso: 79/200   ✅ 75 OK | ❌ 5 ERR | Progreso: 80/200   ✅ 75 OK | ❌ 6 ERR | Progreso: 81/200
+   ⚠️  #80: appointment → The slot you have selected is no longer available. (2337ms)
+   ✅ 75 OK | ❌ 7 ERR | Progreso: 82/200
+   ⚠️  #81: appointment → The slot you have selected is no longer available. (1416ms)
+   ✅ 76 OK | ❌ 7 ERR | Progreso: 83/200   ✅ 77 OK | ❌ 7 ERR | Progreso: 84/200   ✅ 78 OK | ❌ 7 ERR | Progreso: 85/200   ✅ 79 OK | ❌ 7 ERR | Progreso: 86/200   ✅ 80 OK | ❌ 7 ERR | Progreso: 87/200   ✅ 81 OK | ❌ 7 ERR | Progreso: 88/200   ✅ 81 OK | ❌ 8 ERR | Progreso: 89/200
+   ⚠️  #88: appointment → The slot you have selected is no longer available. (1804ms)
+   ✅ 82 OK | ❌ 8 ERR | Progreso: 90/200   ✅ 83 OK | ❌ 8 ERR | Progreso: 91/200   ✅ 84 OK | ❌ 8 ERR | Progreso: 92/200   ✅ 85 OK | ❌ 8 ERR | Progreso: 93/200   ✅ 86 OK | ❌ 8 ERR | Progreso: 94/200   ✅ 87 OK | ❌ 8 ERR | Progreso: 95/200   ✅ 88 OK | ❌ 8 ERR | Progreso: 96/200   ✅ 88 OK | ❌ 9 ERR | Progreso: 97/200
+   ⚠️  #96: appointment → The slot you have selected is no longer available. (1629ms)
+   ✅ 89 OK | ❌ 9 ERR | Progreso: 98/200   ✅ 90 OK | ❌ 9 ERR | Progreso: 99/200   ✅ 91 OK | ❌ 9 ERR | Progreso: 100/200   ✅ 92 OK | ❌ 9 ERR | Progreso: 101/200   ✅ 93 OK | ❌ 9 ERR | Progreso: 102/200   ✅ 94 OK | ❌ 9 ERR | Progreso: 103/200   ✅ 95 OK | ❌ 9 ERR | Progreso: 104/200   ✅ 96 OK | ❌ 9 ERR | Progreso: 105/200   ✅ 96 OK | ❌ 10 ERR | Progreso: 106/200
+   ⚠️  #105: appointment → The slot you have selected is no longer available. (1924ms)
+   ✅ 96 OK | ❌ 11 ERR | Progreso: 107/200
+   ⚠️  #106: appointment → The slot you have selected is no longer available. (1600ms)
+   ✅ 97 OK | ❌ 11 ERR | Progreso: 108/200   ✅ 98 OK | ❌ 11 ERR | Progreso: 109/200   ✅ 99 OK | ❌ 11 ERR | Progreso: 110/200   ✅ 100 OK | ❌ 11 ERR | Progreso: 111/200   ✅ 101 OK | ❌ 11 ERR | Progreso: 112/200   ✅ 102 OK | ❌ 11 ERR | Progreso: 113/200   ✅ 103 OK | ❌ 11 ERR | Progreso: 114/200   ✅ 104 OK | ❌ 11 ERR | Progreso: 115/200   ✅ 105 OK | ❌ 11 ERR | Progreso: 116/200   ✅ 106 OK | ❌ 11 ERR | Progreso: 117/200   ✅ 106 OK | ❌ 12 ERR | Progreso: 118/200
+   ⚠️  #117: appointment → The slot you have selected is no longer available. (1784ms)
+   ✅ 107 OK | ❌ 12 ERR | Progreso: 119/200   ✅ 108 OK | ❌ 12 ERR | Progreso: 120/200   ✅ 109 OK | ❌ 12 ERR | Progreso: 121/200   ✅ 110 OK | ❌ 12 ERR | Progreso: 122/200   ✅ 111 OK | ❌ 12 ERR | Progreso: 123/200   ✅ 112 OK | ❌ 12 ERR | Progreso: 124/200   ✅ 113 OK | ❌ 12 ERR | Progreso: 125/200   ✅ 114 OK | ❌ 12 ERR | Progreso: 126/200   ✅ 115 OK | ❌ 12 ERR | Progreso: 127/200   ✅ 115 OK | ❌ 13 ERR | Progreso: 128/200
+   ⚠️  #127: appointment → The slot you have selected is no longer available. (1857ms)
+   ✅ 115 OK | ❌ 14 ERR | Progreso: 129/200
+   ⚠️  #128: appointment → The slot you have selected is no longer available. (2621ms)
+   ✅ 116 OK | ❌ 14 ERR | Progreso: 130/200   ✅ 116 OK | ❌ 15 ERR | Progreso: 131/200
+   ⚠️  #130: appointment → The slot you have selected is no longer available. (1707ms)
+   ✅ 117 OK | ❌ 15 ERR | Progreso: 132/200   ✅ 117 OK | ❌ 16 ERR | Progreso: 133/200
+   ⚠️  #132: appointment → The slot you have selected is no longer available. (3714ms)
+   ✅ 118 OK | ❌ 16 ERR | Progreso: 134/200   ✅ 119 OK | ❌ 16 ERR | Progreso: 135/200   ✅ 120 OK | ❌ 16 ERR | Progreso: 136/200   ✅ 121 OK | ❌ 16 ERR | Progreso: 137/200   ✅ 122 OK | ❌ 16 ERR | Progreso: 138/200   ✅ 122 OK | ❌ 17 ERR | Progreso: 139/200
+   ⚠️  #138: appointment → The slot you have selected is no longer available. (2387ms)
+   ✅ 122 OK | ❌ 18 ERR | Progreso: 140/200
+   ⚠️  #139: appointment → The slot you have selected is no longer available. (1528ms)
+   ✅ 123 OK | ❌ 18 ERR | Progreso: 141/200   ✅ 123 OK | ❌ 19 ERR | Progreso: 142/200
+   ⚠️  #141: appointment → The slot you have selected is no longer available. (1559ms)
+   ✅ 124 OK | ❌ 19 ERR | Progreso: 143/200   ✅ 125 OK | ❌ 19 ERR | Progreso: 144/200   ✅ 126 OK | ❌ 19 ERR | Progreso: 145/200   ✅ 127 OK | ❌ 19 ERR | Progreso: 146/200   ✅ 128 OK | ❌ 19 ERR | Progreso: 147/200   ✅ 129 OK | ❌ 19 ERR | Progreso: 148/200   ✅ 130 OK | ❌ 19 ERR | Progreso: 149/200   ✅ 131 OK | ❌ 19 ERR | Progreso: 150/200   ✅ 132 OK | ❌ 19 ERR | Progreso: 151/200   ✅ 133 OK | ❌ 19 ERR | Progreso: 152/200   ✅ 134 OK | ❌ 19 ERR | Progreso: 153/200   ✅ 134 OK | ❌ 20 ERR | Progreso: 154/200
+   ⚠️  #153: appointment → The slot you have selected is no longer available. (1619ms)
+   ✅ 134 OK | ❌ 21 ERR | Progreso: 155/200
+   ⚠️  #154: appointment → The slot you have selected is no longer available. (1668ms)
+   ✅ 134 OK | ❌ 22 ERR | Progreso: 156/200
+   ⚠️  #155: appointment → The slot you have selected is no longer available. (2677ms)
+   ✅ 134 OK | ❌ 23 ERR | Progreso: 157/200
+   ⚠️  #156: appointment → The slot you have selected is no longer available. (1899ms)
+   ✅ 135 OK | ❌ 23 ERR | Progreso: 158/200   ✅ 136 OK | ❌ 23 ERR | Progreso: 159/200   ✅ 137 OK | ❌ 23 ERR | Progreso: 160/200   ✅ 137 OK | ❌ 24 ERR | Progreso: 161/200
+   ⚠️  #160: appointment → This operation was aborted (21005ms)
+   ✅ 137 OK | ❌ 25 ERR | Progreso: 162/200
+   ⚠️  #161: appointment → The slot you have selected is no longer available. (1624ms)
+   ✅ 138 OK | ❌ 25 ERR | Progreso: 163/200   ✅ 139 OK | ❌ 25 ERR | Progreso: 164/200   ✅ 139 OK | ❌ 26 ERR | Progreso: 165/200
+   ⚠️  #164: appointment → The slot you have selected is no longer available. (3053ms)
+   ✅ 139 OK | ❌ 27 ERR | Progreso: 166/200
+   ⚠️  #165: appointment → The slot you have selected is no longer available. (2243ms)
+   ✅ 140 OK | ❌ 27 ERR | Progreso: 167/200   ✅ 140 OK | ❌ 28 ERR | Progreso: 168/200
+   ⚠️  #167: appointment → The slot you have selected is no longer available. (1572ms)
+   ✅ 141 OK | ❌ 28 ERR | Progreso: 169/200   ✅ 142 OK | ❌ 28 ERR | Progreso: 170/200   ✅ 142 OK | ❌ 29 ERR | Progreso: 171/200
+   ⚠️  #170: appointment → The slot you have selected is no longer available. (1737ms)
+   ✅ 143 OK | ❌ 29 ERR | Progreso: 172/200   ✅ 144 OK | ❌ 29 ERR | Progreso: 173/200   ✅ 145 OK | ❌ 29 ERR | Progreso: 174/200   ✅ 146 OK | ❌ 29 ERR | Progreso: 175/200   ✅ 147 OK | ❌ 29 ERR | Progreso: 176/200   ✅ 147 OK | ❌ 30 ERR | Progreso: 177/200
+   ⚠️  #176: appointment → The slot you have selected is no longer available. (1577ms)
+   ✅ 147 OK | ❌ 31 ERR | Progreso: 178/200
+   ⚠️  #177: appointment → The slot you have selected is no longer available. (2030ms)
+   ✅ 147 OK | ❌ 32 ERR | Progreso: 179/200
+   ⚠️  #178: appointment → The slot you have selected is no longer available. (1487ms)
+   ✅ 147 OK | ❌ 33 ERR | Progreso: 180/200
+   ⚠️  #179: appointment → The slot you have selected is no longer available. (1896ms)
+   ✅ 148 OK | ❌ 33 ERR | Progreso: 181/200   ✅ 149 OK | ❌ 33 ERR | Progreso: 182/200   ✅ 150 OK | ❌ 33 ERR | Progreso: 183/200   ✅ 151 OK | ❌ 33 ERR | Progreso: 184/200   ✅ 152 OK | ❌ 33 ERR | Progreso: 185/200   ✅ 153 OK | ❌ 33 ERR | Progreso: 186/200   ✅ 153 OK | ❌ 34 ERR | Progreso: 187/200
+   ⚠️  #186: appointment → The slot you have selected is no longer available. (1698ms)
+   ✅ 153 OK | ❌ 35 ERR | Progreso: 188/200
+   ⚠️  #187: appointment → The slot you have selected is no longer available. (1787ms)
+   ✅ 154 OK | ❌ 35 ERR | Progreso: 189/200   ✅ 154 OK | ❌ 36 ERR | Progreso: 190/200
+   ⚠️  #189: appointment → The slot you have selected is no longer available. (4623ms)
+   ✅ 155 OK | ❌ 36 ERR | Progreso: 191/200   ✅ 156 OK | ❌ 36 ERR | Progreso: 192/200   ✅ 157 OK | ❌ 36 ERR | Progreso: 193/200   ✅ 158 OK | ❌ 36 ERR | Progreso: 194/200   ✅ 158 OK | ❌ 37 ERR | Progreso: 195/200
+   ⚠️  #194: appointment → The slot you have selected is no longer available. (1648ms)
+   ✅ 158 OK | ❌ 38 ERR | Progreso: 196/200
+   ⚠️  #195: appointment → The slot you have selected is no longer available. (2921ms)
+   ✅ 159 OK | ❌ 38 ERR | Progreso: 197/200   ✅ 160 OK | ❌ 38 ERR | Progreso: 198/200   ✅ 161 OK | ❌ 38 ERR | Progreso: 199/200   ✅ 162 OK | ❌ 38 ERR | Progreso: 200/200
+   Completado: 162/200 éxitos
+
+⏸️  Pausa de 10s antes de la siguiente tanda...
+
+════════════════════════════════════════════════════════════
+  🚀 TANDA 2: 150 agendas (50 grupos de 3)
+════════════════════════════════════════════════════════════
+   ✅ 1 OK | ❌ 0 ERR | Progreso: 1/150   ✅ 2 OK | ❌ 0 ERR | Progreso: 2/150   ✅ 2 OK | ❌ 1 ERR | Progreso: 3/150
+   ⚠️  #202: appointment → The slot you have selected is no longer available. (1538ms)
+   ✅ 2 OK | ❌ 2 ERR | Progreso: 4/150
+   ⚠️  #203: appointment → The slot you have selected is no longer available. (2027ms)
+   ✅ 2 OK | ❌ 3 ERR | Progreso: 5/150
+   ⚠️  #204: appointment → The slot you have selected is no longer available. (1858ms)
+   ✅ 3 OK | ❌ 3 ERR | Progreso: 6/150   ✅ 3 OK | ❌ 4 ERR | Progreso: 7/150
+   ⚠️  #206: appointment → The slot you have selected is no longer available. (1784ms)
+   ✅ 4 OK | ❌ 4 ERR | Progreso: 8/150   ✅ 5 OK | ❌ 4 ERR | Progreso: 9/150   ✅ 5 OK | ❌ 5 ERR | Progreso: 10/150
+   ⚠️  #209: appointment → The slot you have selected is no longer available. (2381ms)
+   ✅ 5 OK | ❌ 6 ERR | Progreso: 11/150
+   ⚠️  #210: appointment → The slot you have selected is no longer available. (1638ms)
+   ✅ 5 OK | ❌ 7 ERR | Progreso: 12/150
+   ⚠️  #211: appointment → The slot you have selected is no longer available. (1793ms)
+   ✅ 6 OK | ❌ 7 ERR | Progreso: 13/150   ✅ 7 OK | ❌ 7 ERR | Progreso: 14/150   ✅ 7 OK | ❌ 8 ERR | Progreso: 15/150
+   ⚠️  #214: appointment → The slot you have selected is no longer available. (1971ms)
+   ✅ 8 OK | ❌ 8 ERR | Progreso: 16/150   ✅ 9 OK | ❌ 8 ERR | Progreso: 17/150   ✅ 10 OK | ❌ 8 ERR | Progreso: 18/150   ✅ 11 OK | ❌ 8 ERR | Progreso: 19/150   ✅ 12 OK | ❌ 8 ERR | Progreso: 20/150   ✅ 13 OK | ❌ 8 ERR | Progreso: 21/150   ✅ 14 OK | ❌ 8 ERR | Progreso: 22/150   ✅ 15 OK | ❌ 8 ERR | Progreso: 23/150   ✅ 15 OK | ❌ 9 ERR | Progreso: 24/150
+   ⚠️  #223: appointment → The slot you have selected is no longer available. (1654ms)
+   ✅ 16 OK | ❌ 9 ERR | Progreso: 25/150   ✅ 17 OK | ❌ 9 ERR | Progreso: 26/150   ✅ 18 OK | ❌ 9 ERR | Progreso: 27/150   ✅ 19 OK | ❌ 9 ERR | Progreso: 28/150   ✅ 20 OK | ❌ 9 ERR | Progreso: 29/150   ✅ 21 OK | ❌ 9 ERR | Progreso: 30/150   ✅ 22 OK | ❌ 9 ERR | Progreso: 31/150   ✅ 23 OK | ❌ 9 ERR | Progreso: 32/150   ✅ 24 OK | ❌ 9 ERR | Progreso: 33/150   ✅ 25 OK | ❌ 9 ERR | Progreso: 34/150   ✅ 26 OK | ❌ 9 ERR | Progreso: 35/150   ✅ 27 OK | ❌ 9 ERR | Progreso: 36/150   ✅ 27 OK | ❌ 10 ERR | Progreso: 37/150
+   ⚠️  #236: appointment → The slot you have selected is no longer available. (1968ms)
+   ✅ 28 OK | ❌ 10 ERR | Progreso: 38/150   ✅ 28 OK | ❌ 11 ERR | Progreso: 39/150
+   ⚠️  #238: appointment → The slot you have selected is no longer available. (2247ms)
+   ✅ 28 OK | ❌ 12 ERR | Progreso: 40/150
+   ⚠️  #239: appointment → The slot you have selected is no longer available. (1803ms)
+   ✅ 29 OK | ❌ 12 ERR | Progreso: 41/150   ✅ 29 OK | ❌ 13 ERR | Progreso: 42/150
+   ⚠️  #241: appointment → The slot you have selected is no longer available. (1830ms)
+   ✅ 29 OK | ❌ 14 ERR | Progreso: 43/150
+   ⚠️  #242: appointment → The slot you have selected is no longer available. (2040ms)
+   ✅ 30 OK | ❌ 14 ERR | Progreso: 44/150   ✅ 31 OK | ❌ 14 ERR | Progreso: 45/150   ✅ 32 OK | ❌ 14 ERR | Progreso: 46/150   ✅ 32 OK | ❌ 15 ERR | Progreso: 47/150
+   ⚠️  #246: appointment → The slot you have selected is no longer available. (1594ms)
+   ✅ 33 OK | ❌ 15 ERR | Progreso: 48/150   ✅ 34 OK | ❌ 15 ERR | Progreso: 49/150   ✅ 34 OK | ❌ 16 ERR | Progreso: 50/150
+   ⚠️  #249: appointment → The slot you have selected is no longer available. (1898ms)
+   ✅ 35 OK | ❌ 16 ERR | Progreso: 51/150   ✅ 36 OK | ❌ 16 ERR | Progreso: 52/150   ✅ 37 OK | ❌ 16 ERR | Progreso: 53/150   ✅ 38 OK | ❌ 16 ERR | Progreso: 54/150   ✅ 38 OK | ❌ 17 ERR | Progreso: 55/150
+   ⚠️  #254: appointment → The slot you have selected is no longer available. (3248ms)
+   ✅ 39 OK | ❌ 17 ERR | Progreso: 56/150   ✅ 40 OK | ❌ 17 ERR | Progreso: 57/150   ✅ 41 OK | ❌ 17 ERR | Progreso: 58/150   ✅ 42 OK | ❌ 17 ERR | Progreso: 59/150   ✅ 42 OK | ❌ 18 ERR | Progreso: 60/150
+   ⚠️  #259: appointment → The slot you have selected is no longer available. (2796ms)
+   ✅ 42 OK | ❌ 19 ERR | Progreso: 61/150
+   ⚠️  #260: appointment → The slot you have selected is no longer available. (3802ms)
+   ✅ 43 OK | ❌ 19 ERR | Progreso: 62/150   ✅ 43 OK | ❌ 20 ERR | Progreso: 63/150
+   ⚠️  #262: appointment → The slot you have selected is no longer available. (2000ms)
+   ✅ 44 OK | ❌ 20 ERR | Progreso: 64/150   ✅ 45 OK | ❌ 20 ERR | Progreso: 65/150   ✅ 45 OK | ❌ 21 ERR | Progreso: 66/150
+   ⚠️  #265: appointment → The slot you have selected is no longer available. (2577ms)
+   ✅ 46 OK | ❌ 21 ERR | Progreso: 67/150   ✅ 47 OK | ❌ 21 ERR | Progreso: 68/150   ✅ 47 OK | ❌ 22 ERR | Progreso: 69/150
+   ⚠️  #268: appointment → The slot you have selected is no longer available. (1824ms)
+   ✅ 48 OK | ❌ 22 ERR | Progreso: 70/150   ✅ 49 OK | ❌ 22 ERR | Progreso: 71/150   ✅ 49 OK | ❌ 23 ERR | Progreso: 72/150
+   ⚠️  #271: appointment → The slot you have selected is no longer available. (1792ms)
+   ✅ 50 OK | ❌ 23 ERR | Progreso: 73/150   ✅ 51 OK | ❌ 23 ERR | Progreso: 74/150   ✅ 52 OK | ❌ 23 ERR | Progreso: 75/150   ✅ 52 OK | ❌ 24 ERR | Progreso: 76/150
+   ⚠️  #275: appointment → The slot you have selected is no longer available. (2551ms)
+   ✅ 52 OK | ❌ 25 ERR | Progreso: 77/150
+   ⚠️  #276: appointment → The slot you have selected is no longer available. (4072ms)
+   ✅ 52 OK | ❌ 26 ERR | Progreso: 78/150
+   ⚠️  #277: appointment → The slot you have selected is no longer available. (1607ms)
+   ✅ 52 OK | ❌ 27 ERR | Progreso: 79/150
+   ⚠️  #278: appointment → The slot you have selected is no longer available. (1404ms)
+   ✅ 53 OK | ❌ 27 ERR | Progreso: 80/150   ✅ 53 OK | ❌ 28 ERR | Progreso: 81/150
+   ⚠️  #280: appointment → The slot you have selected is no longer available. (5334ms)
+   ✅ 54 OK | ❌ 28 ERR | Progreso: 82/150   ✅ 55 OK | ❌ 28 ERR | Progreso: 83/150   ✅ 55 OK | ❌ 29 ERR | Progreso: 84/150
+   ⚠️  #283: appointment → The slot you have selected is no longer available. (1889ms)
+   ✅ 56 OK | ❌ 29 ERR | Progreso: 85/150   ✅ 56 OK | ❌ 30 ERR | Progreso: 86/150
+   ⚠️  #285: appointment → The slot you have selected is no longer available. (2063ms)
+   ✅ 57 OK | ❌ 30 ERR | Progreso: 87/150   ✅ 57 OK | ❌ 31 ERR | Progreso: 88/150
+   ⚠️  #287: appointment → The slot you have selected is no longer available. (2321ms)
+   ✅ 57 OK | ❌ 32 ERR | Progreso: 89/150
+   ⚠️  #288: appointment → The slot you have selected is no longer available. (1592ms)
+   ✅ 58 OK | ❌ 32 ERR | Progreso: 90/150   ✅ 58 OK | ❌ 33 ERR | Progreso: 91/150
+   ⚠️  #290: appointment → The slot you have selected is no longer available. (2050ms)
+   ✅ 58 OK | ❌ 34 ERR | Progreso: 92/150
+   ⚠️  #291: appointment → The slot you have selected is no longer available. (2698ms)
+   ✅ 58 OK | ❌ 35 ERR | Progreso: 93/150
+   ⚠️  #292: appointment → The slot you have selected is no longer available. (3308ms)
+   ✅ 59 OK | ❌ 35 ERR | Progreso: 94/150   ✅ 59 OK | ❌ 36 ERR | Progreso: 95/150
+   ⚠️  #294: appointment → The slot you have selected is no longer available. (1668ms)
+   ✅ 60 OK | ❌ 36 ERR | Progreso: 96/150   ✅ 61 OK | ❌ 36 ERR | Progreso: 97/150   ✅ 62 OK | ❌ 36 ERR | Progreso: 98/150   ✅ 63 OK | ❌ 36 ERR | Progreso: 99/150   ✅ 63 OK | ❌ 37 ERR | Progreso: 100/150
+   ⚠️  #299: appointment → The slot you have selected is no longer available. (2142ms)
+   ✅ 64 OK | ❌ 37 ERR | Progreso: 101/150   ✅ 65 OK | ❌ 37 ERR | Progreso: 102/150   ✅ 66 OK | ❌ 37 ERR | Progreso: 103/150   ✅ 66 OK | ❌ 38 ERR | Progreso: 104/150
+   ⚠️  #303: appointment → The slot you have selected is no longer available. (1507ms)
+   ✅ 66 OK | ❌ 39 ERR | Progreso: 105/150
+   ⚠️  #304: appointment → The slot you have selected is no longer available. (2392ms)
+   ✅ 66 OK | ❌ 40 ERR | Progreso: 106/150
+   ⚠️  #305: appointment → The slot you have selected is no longer available. (2326ms)
+   ✅ 66 OK | ❌ 41 ERR | Progreso: 107/150
+   ⚠️  #306: appointment → The slot you have selected is no longer available. (2347ms)
+   ✅ 66 OK | ❌ 42 ERR | Progreso: 108/150
+   ⚠️  #307: appointment → The slot you have selected is no longer available. (1766ms)
+   ✅ 67 OK | ❌ 42 ERR | Progreso: 109/150   ✅ 68 OK | ❌ 42 ERR | Progreso: 110/150   ✅ 69 OK | ❌ 42 ERR | Progreso: 111/150   ✅ 70 OK | ❌ 42 ERR | Progreso: 112/150   ✅ 71 OK | ❌ 42 ERR | Progreso: 113/150   ✅ 72 OK | ❌ 42 ERR | Progreso: 114/150   ✅ 73 OK | ❌ 42 ERR | Progreso: 115/150   ✅ 73 OK | ❌ 43 ERR | Progreso: 116/150
+   ⚠️  #315: appointment → The slot you have selected is no longer available. (2506ms)
+   ✅ 73 OK | ❌ 44 ERR | Progreso: 117/150
+   ⚠️  #316: appointment → The slot you have selected is no longer available. (2134ms)
+   ✅ 73 OK | ❌ 45 ERR | Progreso: 118/150
+   ⚠️  #317: appointment → The slot you have selected is no longer available. (2903ms)
+   ✅ 73 OK | ❌ 46 ERR | Progreso: 119/150
+   ⚠️  #318: appointment → The slot you have selected is no longer available. (2592ms)
+   ✅ 73 OK | ❌ 47 ERR | Progreso: 120/150
+   ⚠️  #319: appointment → The slot you have selected is no longer available. (2064ms)
+   ✅ 73 OK | ❌ 48 ERR | Progreso: 121/150
+   ⚠️  #320: appointment → The slot you have selected is no longer available. (1662ms)
+   ✅ 73 OK | ❌ 49 ERR | Progreso: 122/150
+   ⚠️  #321: appointment → The slot you have selected is no longer available. (4067ms)
+   ✅ 74 OK | ❌ 49 ERR | Progreso: 123/150   ✅ 75 OK | ❌ 49 ERR | Progreso: 124/150   ✅ 76 OK | ❌ 49 ERR | Progreso: 125/150   ✅ 76 OK | ❌ 50 ERR | Progreso: 126/150
+   ⚠️  #325: appointment → The slot you have selected is no longer available. (1818ms)
+   ✅ 77 OK | ❌ 50 ERR | Progreso: 127/150   ✅ 77 OK | ❌ 51 ERR | Progreso: 128/150
+   ⚠️  #327: appointment → The slot you have selected is no longer available. (1808ms)
+   ✅ 78 OK | ❌ 51 ERR | Progreso: 129/150   ✅ 78 OK | ❌ 52 ERR | Progreso: 130/150
+   ⚠️  #329: appointment → The slot you have selected is no longer available. (2780ms)
+   ✅ 78 OK | ❌ 53 ERR | Progreso: 131/150
+   ⚠️  #330: appointment → The slot you have selected is no longer available. (2608ms)
+   ✅ 78 OK | ❌ 54 ERR | Progreso: 132/150
+   ⚠️  #331: appointment → The slot you have selected is no longer available. (1743ms)
+   ✅ 78 OK | ❌ 55 ERR | Progreso: 133/150
+   ⚠️  #332: appointment → The slot you have selected is no longer available. (1928ms)
+   ✅ 78 OK | ❌ 56 ERR | Progreso: 134/150
+   ⚠️  #333: appointment → The slot you have selected is no longer available. (1749ms)
+   ✅ 79 OK | ❌ 56 ERR | Progreso: 135/150   ✅ 79 OK | ❌ 57 ERR | Progreso: 136/150
+   ⚠️  #335: appointment → The slot you have selected is no longer available. (1819ms)
+   ✅ 79 OK | ❌ 58 ERR | Progreso: 137/150
+   ⚠️  #336: appointment → The slot you have selected is no longer available. (1683ms)
+   ✅ 79 OK | ❌ 59 ERR | Progreso: 138/150
+   ⚠️  #337: appointment → The slot you have selected is no longer available. (1571ms)
+   ✅ 79 OK | ❌ 60 ERR | Progreso: 139/150
+   ⚠️  #338: appointment → The slot you have selected is no longer available. (1503ms)
+   ✅ 80 OK | ❌ 60 ERR | Progreso: 140/150   ✅ 80 OK | ❌ 61 ERR | Progreso: 141/150
+   ⚠️  #340: appointment → The slot you have selected is no longer available. (1500ms)
+   ✅ 80 OK | ❌ 62 ERR | Progreso: 142/150
+   ⚠️  #341: appointment → The slot you have selected is no longer available. (1556ms)
+   ✅ 80 OK | ❌ 63 ERR | Progreso: 143/150
+   ⚠️  #342: appointment → The slot you have selected is no longer available. (2668ms)
+   ✅ 81 OK | ❌ 63 ERR | Progreso: 144/150   ✅ 82 OK | ❌ 63 ERR | Progreso: 145/150   ✅ 83 OK | ❌ 63 ERR | Progreso: 146/150   ✅ 84 OK | ❌ 63 ERR | Progreso: 147/150   ✅ 84 OK | ❌ 64 ERR | Progreso: 148/150
+   ⚠️  #347: appointment → The slot you have selected is no longer available. (2387ms)
+   ✅ 85 OK | ❌ 64 ERR | Progreso: 149/150   ✅ 85 OK | ❌ 65 ERR | Progreso: 150/150
+   ⚠️  #349: appointment → The slot you have selected is no longer available. (1656ms)
+
+   Completado: 85/150 éxitos
+
+⏸️  Pausa de 10s antes de la siguiente tanda...
+
+════════════════════════════════════════════════════════════
+  🚀 TANDA 3: 80 agendas (27 grupos de 3)
+════════════════════════════════════════════════════════════
+   ✅ 0 OK | ❌ 1 ERR | Progreso: 1/80
+   ⚠️  #350: appointment → The slot you have selected is no longer available. (2871ms)
+   ✅ 0 OK | ❌ 2 ERR | Progreso: 2/80
+   ⚠️  #351: appointment → The slot you have selected is no longer available. (1857ms)
+   ✅ 1 OK | ❌ 2 ERR | Progreso: 3/80   ✅ 1 OK | ❌ 3 ERR | Progreso: 4/80
+   ⚠️  #353: appointment → The slot you have selected is no longer available. (1517ms)
+   ✅ 2 OK | ❌ 3 ERR | Progreso: 5/80   ✅ 2 OK | ❌ 4 ERR | Progreso: 6/80
+   ⚠️  #355: appointment → The slot you have selected is no longer available. (1985ms)
+   ✅ 2 OK | ❌ 5 ERR | Progreso: 7/80
+   ⚠️  #356: appointment → The slot you have selected is no longer available. (2137ms)
+   ✅ 3 OK | ❌ 5 ERR | Progreso: 8/80   ✅ 3 OK | ❌ 6 ERR | Progreso: 9/80
+   ⚠️  #358: appointment → The slot you have selected is no longer available. (11610ms)
+   ✅ 3 OK | ❌ 7 ERR | Progreso: 10/80
+   ⚠️  #359: appointment → The slot you have selected is no longer available. (2204ms)
+   ✅ 4 OK | ❌ 7 ERR | Progreso: 11/80   ✅ 4 OK | ❌ 8 ERR | Progreso: 12/80
+   ⚠️  #361: appointment → The slot you have selected is no longer available. (1743ms)
+   ✅ 4 OK | ❌ 9 ERR | Progreso: 13/80
+   ⚠️  #362: appointment → The slot you have selected is no longer available. (5579ms)
+   ✅ 5 OK | ❌ 9 ERR | Progreso: 14/80   ✅ 6 OK | ❌ 9 ERR | Progreso: 15/80   ✅ 6 OK | ❌ 10 ERR | Progreso: 16/80
+   ⚠️  #365: appointment → The slot you have selected is no longer available. (1684ms)
+   ✅ 6 OK | ❌ 11 ERR | Progreso: 17/80
+   ⚠️  #366: appointment → The slot you have selected is no longer available. (2166ms)
+   ✅ 6 OK | ❌ 12 ERR | Progreso: 18/80
+   ⚠️  #367: appointment → The slot you have selected is no longer available. (1639ms)
+   ✅ 6 OK | ❌ 13 ERR | Progreso: 19/80
+   ⚠️  #368: appointment → The slot you have selected is no longer available. (3388ms)
+   ✅ 7 OK | ❌ 13 ERR | Progreso: 20/80   ✅ 8 OK | ❌ 13 ERR | Progreso: 21/80   ✅ 8 OK | ❌ 14 ERR | Progreso: 22/80
+   ⚠️  #371: appointment → The slot you have selected is no longer available. (2168ms)
+   ✅ 9 OK | ❌ 14 ERR | Progreso: 23/80   ✅ 10 OK | ❌ 14 ERR | Progreso: 24/80   ✅ 11 OK | ❌ 14 ERR | Progreso: 25/80   ✅ 11 OK | ❌ 15 ERR | Progreso: 26/80
+   ⚠️  #375: appointment → The slot you have selected is no longer available. (1611ms)
+   ✅ 11 OK | ❌ 16 ERR | Progreso: 27/80
+   ⚠️  #376: appointment → The slot you have selected is no longer available. (3616ms)
+   ✅ 11 OK | ❌ 17 ERR | Progreso: 28/80
+   ⚠️  #377: appointment → The slot you have selected is no longer available. (1876ms)
+   ✅ 12 OK | ❌ 17 ERR | Progreso: 29/80   ✅ 13 OK | ❌ 17 ERR | Progreso: 30/80   ✅ 13 OK | ❌ 18 ERR | Progreso: 31/80
+   ⚠️  #380: appointment → The slot you have selected is no longer available. (1863ms)
+   ✅ 14 OK | ❌ 18 ERR | Progreso: 32/80   ✅ 15 OK | ❌ 18 ERR | Progreso: 33/80   ✅ 15 OK | ❌ 19 ERR | Progreso: 34/80
+   ⚠️  #383: appointment → The slot you have selected is no longer available. (1585ms)
+   ✅ 15 OK | ❌ 20 ERR | Progreso: 35/80
+   ⚠️  #384: appointment → The slot you have selected is no longer available. (1552ms)
+   ✅ 15 OK | ❌ 21 ERR | Progreso: 36/80
+   ⚠️  #385: appointment → The slot you have selected is no longer available. (1688ms)
+   ✅ 15 OK | ❌ 22 ERR | Progreso: 37/80
+   ⚠️  #386: appointment → The slot you have selected is no longer available. (1416ms)
+   ✅ 15 OK | ❌ 23 ERR | Progreso: 38/80
+   ⚠️  #387: appointment → The slot you have selected is no longer available. (1638ms)
+   ✅ 15 OK | ❌ 24 ERR | Progreso: 39/80
+   ⚠️  #388: appointment → The slot you have selected is no longer available. (1665ms)
+   ✅ 15 OK | ❌ 25 ERR | Progreso: 40/80
+   ⚠️  #389: appointment → The slot you have selected is no longer available. (1476ms)
+   ✅ 15 OK | ❌ 26 ERR | Progreso: 41/80
+   ⚠️  #390: appointment → The slot you have selected is no longer available. (1636ms)
+   ✅ 16 OK | ❌ 26 ERR | Progreso: 42/80   ✅ 16 OK | ❌ 27 ERR | Progreso: 43/80
+   ⚠️  #392: appointment → The slot you have selected is no longer available. (1631ms)
+   ✅ 16 OK | ❌ 28 ERR | Progreso: 44/80
+   ⚠️  #393: appointment → The slot you have selected is no longer available. (1990ms)
+   ✅ 17 OK | ❌ 28 ERR | Progreso: 45/80   ✅ 17 OK | ❌ 29 ERR | Progreso: 46/80
+   ⚠️  #395: appointment → The slot you have selected is no longer available. (1658ms)
+   ✅ 17 OK | ❌ 30 ERR | Progreso: 47/80
+   ⚠️  #396: appointment → The slot you have selected is no longer available. (1835ms)
+   ✅ 17 OK | ❌ 31 ERR | Progreso: 48/80
+   ⚠️  #397: appointment → The slot you have selected is no longer available. (2389ms)
+   ✅ 17 OK | ❌ 32 ERR | Progreso: 49/80
+   ⚠️  #398: appointment → The slot you have selected is no longer available. (3115ms)
+   ✅ 17 OK | ❌ 33 ERR | Progreso: 50/80
+   ⚠️  #399: appointment → The slot you have selected is no longer available. (1640ms)
+   ✅ 17 OK | ❌ 34 ERR | Progreso: 51/80
+   ⚠️  #400: appointment → The slot you have selected is no longer available. (2210ms)
+   ✅ 18 OK | ❌ 34 ERR | Progreso: 52/80   ✅ 18 OK | ❌ 35 ERR | Progreso: 53/80
+   ⚠️  #402: appointment → The slot you have selected is no longer available. (2386ms)
+   ✅ 18 OK | ❌ 36 ERR | Progreso: 54/80
+   ⚠️  #403: appointment → The slot you have selected is no longer available. (2068ms)
+   ✅ 19 OK | ❌ 36 ERR | Progreso: 55/80   ✅ 19 OK | ❌ 37 ERR | Progreso: 56/80
+   ⚠️  #405: appointment → The slot you have selected is no longer available. (3025ms)
+   ✅ 20 OK | ❌ 37 ERR | Progreso: 57/80   ✅ 21 OK | ❌ 37 ERR | Progreso: 58/80   ✅ 21 OK | ❌ 38 ERR | Progreso: 59/80
+   ⚠️  #408: appointment → The slot you have selected is no longer available. (1796ms)
+   ✅ 21 OK | ❌ 39 ERR | Progreso: 60/80
+   ⚠️  #409: appointment → The slot you have selected is no longer available. (1882ms)
+   ✅ 21 OK | ❌ 40 ERR | Progreso: 61/80
+   ⚠️  #410: appointment → The slot you have selected is no longer available. (3193ms)
+   ✅ 22 OK | ❌ 40 ERR | Progreso: 62/80   ✅ 22 OK | ❌ 41 ERR | Progreso: 63/80
+   ⚠️  #412: appointment → The slot you have selected is no longer available. (1652ms)
+   ✅ 22 OK | ❌ 42 ERR | Progreso: 64/80
+   ⚠️  #413: appointment → The slot you have selected is no longer available. (1676ms)
+   ✅ 22 OK | ❌ 43 ERR | Progreso: 65/80
+   ⚠️  #414: appointment → The slot you have selected is no longer available. (2032ms)
+   ✅ 23 OK | ❌ 43 ERR | Progreso: 66/80   ✅ 23 OK | ❌ 44 ERR | Progreso: 67/80
+   ⚠️  #416: appointment → The slot you have selected is no longer available. (1671ms)
+   ✅ 24 OK | ❌ 44 ERR | Progreso: 68/80   ✅ 24 OK | ❌ 45 ERR | Progreso: 69/80
+   ⚠️  #418: appointment → The slot you have selected is no longer available. (1833ms)
+   ✅ 24 OK | ❌ 46 ERR | Progreso: 70/80
+   ⚠️  #419: appointment → The slot you have selected is no longer available. (2292ms)
+   ✅ 25 OK | ❌ 46 ERR | Progreso: 71/80   ✅ 26 OK | ❌ 46 ERR | Progreso: 72/80   ✅ 26 OK | ❌ 47 ERR | Progreso: 73/80
+   ⚠️  #422: appointment → The slot you have selected is no longer available. (1852ms)
+   ✅ 26 OK | ❌ 48 ERR | Progreso: 74/80
+   ⚠️  #423: appointment → The slot you have selected is no longer available. (1699ms)
+   ✅ 26 OK | ❌ 49 ERR | Progreso: 75/80
+   ⚠️  #424: appointment → The slot you have selected is no longer available. (2389ms)
+   ✅ 27 OK | ❌ 49 ERR | Progreso: 76/80   ✅ 27 OK | ❌ 50 ERR | Progreso: 77/80
+   ⚠️  #426: appointment → The slot you have selected is no longer available. (1782ms)
+   ✅ 27 OK | ❌ 51 ERR | Progreso: 78/80
+   ⚠️  #427: appointment → The slot you have selected is no longer available. (2077ms)
+   ✅ 28 OK | ❌ 51 ERR | Progreso: 79/80   ✅ 28 OK | ❌ 52 ERR | Progreso: 80/80
+   ⚠️  #429: appointment → The slot you have selected is no longer available. (1457ms)
+
+   Completado: 28/80 éxitos
+
+⏸️  Pausa de 10s antes de la siguiente tanda...
+
+════════════════════════════════════════════════════════════
+  🚀 TANDA 4: 70 agendas (24 grupos de 3)
+════════════════════════════════════════════════════════════
+   ✅ 0 OK | ❌ 1 ERR | Progreso: 1/70
+   ⚠️  #430: appointment → The slot you have selected is no longer available. (2118ms)
+   ✅ 0 OK | ❌ 2 ERR | Progreso: 2/70
+   ⚠️  #431: appointment → The slot you have selected is no longer available. (2034ms)
+   ✅ 0 OK | ❌ 3 ERR | Progreso: 3/70
+   ⚠️  #432: appointment → The slot you have selected is no longer available. (1681ms)
+   ✅ 0 OK | ❌ 4 ERR | Progreso: 4/70
+   ⚠️  #433: appointment → The slot you have selected is no longer available. (2027ms)
+   ✅ 0 OK | ❌ 5 ERR | Progreso: 5/70
+   ⚠️  #434: appointment → The slot you have selected is no longer available. (1816ms)
+   ✅ 0 OK | ❌ 6 ERR | Progreso: 6/70
+   ⚠️  #435: appointment → The slot you have selected is no longer available. (1833ms)
+   ✅ 0 OK | ❌ 7 ERR | Progreso: 7/70
+   ⚠️  #436: appointment → The slot you have selected is no longer available. (1714ms)
+   ✅ 1 OK | ❌ 7 ERR | Progreso: 8/70   ✅ 2 OK | ❌ 7 ERR | Progreso: 9/70   ✅ 2 OK | ❌ 8 ERR | Progreso: 10/70
+   ⚠️  #439: appointment → The slot you have selected is no longer available. (1514ms)
+   ✅ 2 OK | ❌ 9 ERR | Progreso: 11/70
+   ⚠️  #440: appointment → The slot you have selected is no longer available. (1618ms)
+   ✅ 2 OK | ❌ 10 ERR | Progreso: 12/70
+   ⚠️  #441: appointment → The slot you have selected is no longer available. (2110ms)
+   ✅ 3 OK | ❌ 10 ERR | Progreso: 13/70   ✅ 3 OK | ❌ 11 ERR | Progreso: 14/70
+   ⚠️  #443: appointment → The slot you have selected is no longer available. (1986ms)
+   ✅ 4 OK | ❌ 11 ERR | Progreso: 15/70   ✅ 4 OK | ❌ 12 ERR | Progreso: 16/70
+   ⚠️  #445: appointment → The slot you have selected is no longer available. (1650ms)
+   ✅ 4 OK | ❌ 13 ERR | Progreso: 17/70
+   ⚠️  #446: appointment → The slot you have selected is no longer available. (1740ms)
+   ✅ 5 OK | ❌ 13 ERR | Progreso: 18/70   ✅ 5 OK | ❌ 14 ERR | Progreso: 19/70
+   ⚠️  #448: appointment → The slot you have selected is no longer available. (2161ms)
+   ✅ 5 OK | ❌ 15 ERR | Progreso: 20/70
+   ⚠️  #449: appointment → The slot you have selected is no longer available. (2946ms)
+   ✅ 5 OK | ❌ 16 ERR | Progreso: 21/70
+   ⚠️  #450: appointment → The slot you have selected is no longer available. (1743ms)
+   ✅ 5 OK | ❌ 17 ERR | Progreso: 22/70
+   ⚠️  #451: appointment → The slot you have selected is no longer available. (1576ms)
+   ✅ 5 OK | ❌ 18 ERR | Progreso: 23/70
+   ⚠️  #452: appointment → The slot you have selected is no longer available. (2039ms)
+   ✅ 5 OK | ❌ 19 ERR | Progreso: 24/70
+   ⚠️  #453: appointment → The slot you have selected is no longer available. (2188ms)
+   ✅ 5 OK | ❌ 20 ERR | Progreso: 25/70
+   ⚠️  #454: appointment → The slot you have selected is no longer available. (1896ms)
+   ✅ 5 OK | ❌ 21 ERR | Progreso: 26/70
+   ⚠️  #455: appointment → The slot you have selected is no longer available. (1596ms)
+   ✅ 5 OK | ❌ 22 ERR | Progreso: 27/70
+   ⚠️  #456: appointment → The slot you have selected is no longer available. (1457ms)
+   ✅ 5 OK | ❌ 23 ERR | Progreso: 28/70
+   ⚠️  #457: appointment → The slot you have selected is no longer available. (1631ms)
+   ✅ 6 OK | ❌ 23 ERR | Progreso: 29/70   ✅ 6 OK | ❌ 24 ERR | Progreso: 30/70
+   ⚠️  #459: appointment → The slot you have selected is no longer available. (2185ms)
+   ✅ 6 OK | ❌ 25 ERR | Progreso: 31/70
+   ⚠️  #460: appointment → The slot you have selected is no longer available. (1866ms)
+   ✅ 6 OK | ❌ 26 ERR | Progreso: 32/70
+   ⚠️  #461: appointment → The slot you have selected is no longer available. (2300ms)
+   ✅ 6 OK | ❌ 27 ERR | Progreso: 33/70
+   ⚠️  #462: appointment → The slot you have selected is no longer available. (1633ms)
+   ✅ 6 OK | ❌ 28 ERR | Progreso: 34/70
+   ⚠️  #463: appointment → The slot you have selected is no longer available. (2358ms)
+   ✅ 6 OK | ❌ 29 ERR | Progreso: 35/70
+   ⚠️  #464: appointment → The slot you have selected is no longer available. (1724ms)
+   ✅ 6 OK | ❌ 30 ERR | Progreso: 36/70
+   ⚠️  #465: appointment → The slot you have selected is no longer available. (2392ms)
+   ✅ 6 OK | ❌ 31 ERR | Progreso: 37/70
+   ⚠️  #466: appointment → The slot you have selected is no longer available. (2798ms)
+   ✅ 7 OK | ❌ 31 ERR | Progreso: 38/70   ✅ 7 OK | ❌ 32 ERR | Progreso: 39/70
+   ⚠️  #468: appointment → The slot you have selected is no longer available. (2430ms)
+   ✅ 7 OK | ❌ 33 ERR | Progreso: 40/70
+   ⚠️  #469: appointment → The slot you have selected is no longer available. (1823ms)
+   ✅ 7 OK | ❌ 34 ERR | Progreso: 41/70
+   ⚠️  #470: appointment → The slot you have selected is no longer available. (1787ms)
+   ✅ 7 OK | ❌ 35 ERR | Progreso: 42/70
+   ⚠️  #471: appointment → The slot you have selected is no longer available. (2217ms)
+   ✅ 7 OK | ❌ 36 ERR | Progreso: 43/70
+   ⚠️  #472: appointment → The slot you have selected is no longer available. (1644ms)
+   ✅ 7 OK | ❌ 37 ERR | Progreso: 44/70
+   ⚠️  #473: appointment → The slot you have selected is no longer available. (1856ms)
+   ✅ 7 OK | ❌ 38 ERR | Progreso: 45/70
+   ⚠️  #474: appointment → The slot you have selected is no longer available. (1605ms)
+   ✅ 7 OK | ❌ 39 ERR | Progreso: 46/70
+   ⚠️  #475: appointment → The slot you have selected is no longer available. (1482ms)
+   ✅ 7 OK | ❌ 40 ERR | Progreso: 47/70
+   ⚠️  #476: appointment → The slot you have selected is no longer available. (1298ms)
+   ✅ 7 OK | ❌ 41 ERR | Progreso: 48/70
+   ⚠️  #477: appointment → The slot you have selected is no longer available. (1826ms)
+   ✅ 8 OK | ❌ 41 ERR | Progreso: 49/70   ✅ 8 OK | ❌ 42 ERR | Progreso: 50/70
+   ⚠️  #479: appointment → The slot you have selected is no longer available. (1872ms)
+   ✅ 8 OK | ❌ 43 ERR | Progreso: 51/70
+   ⚠️  #480: appointment → The slot you have selected is no longer available. (1284ms)
+   ✅ 8 OK | ❌ 44 ERR | Progreso: 52/70
+   ⚠️  #481: appointment → The slot you have selected is no longer available. (2609ms)
+   ✅ 8 OK | ❌ 45 ERR | Progreso: 53/70
+   ⚠️  #482: appointment → The slot you have selected is no longer available. (2406ms)
+   ✅ 8 OK | ❌ 46 ERR | Progreso: 54/70
+   ⚠️  #483: appointment → The slot you have selected is no longer available. (1604ms)
+   ✅ 8 OK | ❌ 47 ERR | Progreso: 55/70
+   ⚠️  #484: appointment → The slot you have selected is no longer available. (1663ms)
+   ✅ 8 OK | ❌ 48 ERR | Progreso: 56/70
+   ⚠️  #485: appointment → The slot you have selected is no longer available. (1544ms)
+   ✅ 8 OK | ❌ 49 ERR | Progreso: 57/70
+   ⚠️  #486: appointment → The slot you have selected is no longer available. (1925ms)
+   ✅ 8 OK | ❌ 50 ERR | Progreso: 58/70
+   ⚠️  #487: appointment → The slot you have selected is no longer available. (1465ms)
+   ✅ 8 OK | ❌ 51 ERR | Progreso: 59/70
+   ⚠️  #488: appointment → The slot you have selected is no longer available. (1723ms)
+   ✅ 8 OK | ❌ 52 ERR | Progreso: 60/70
+   ⚠️  #489: appointment → The slot you have selected is no longer available. (1477ms)
+   ✅ 8 OK | ❌ 53 ERR | Progreso: 61/70
+   ⚠️  #490: appointment → The slot you have selected is no longer available. (1528ms)
+   ✅ 8 OK | ❌ 54 ERR | Progreso: 62/70
+   ⚠️  #491: appointment → The slot you have selected is no longer available. (6109ms)
+   ✅ 8 OK | ❌ 55 ERR | Progreso: 63/70
+   ⚠️  #492: appointment → The slot you have selected is no longer available. (1463ms)
+   ✅ 9 OK | ❌ 55 ERR | Progreso: 64/70   ✅ 9 OK | ❌ 56 ERR | Progreso: 65/70
+   ⚠️  #494: appointment → The slot you have selected is no longer available. (1719ms)
+   ✅ 9 OK | ❌ 57 ERR | Progreso: 66/70
+   ⚠️  #495: appointment → The slot you have selected is no longer available. (2003ms)
+   ✅ 9 OK | ❌ 58 ERR | Progreso: 67/70
+   ⚠️  #496: appointment → The slot you have selected is no longer available. (1698ms)
+   ✅ 9 OK | ❌ 59 ERR | Progreso: 68/70
+   ⚠️  #497: appointment → The slot you have selected is no longer available. (1345ms)
+   ✅ 9 OK | ❌ 60 ERR | Progreso: 69/70
+   ⚠️  #498: appointment → The slot you have selected is no longer available. (2463ms)
+   ✅ 9 OK | ❌ 61 ERR | Progreso: 70/70
+   ⚠️  #499: appointment → The slot you have selected is no longer available. (1736ms)
+
+   Completado: 9/70 éxitos
+
+
+
+╔══════════════════════════════════════════════════════════╗
+║     REPORTE FINAL — TEST DE ESTRÉS REAL (GHL)          ║
+╠══════════════════════════════════════════════════════════╣
+║ Total enviados:         500                              ║
+║ Éxitos:                 284 (56.8%)                      ║
+║ Errores:                216 (43.2%)                      ║
+╠══════════════════════════════════════════════════════════╣
+║ TIEMPOS DE RESPUESTA                                   ║
+║ Mínimo:                 1272ms                           ║
+║ Máximo:                 21005ms                          ║
+║ Promedio:               2088ms                           ║
+║ Percentil 95:           3060ms                           ║
+║ Percentil 99:           5193ms                           ║
+╠══════════════════════════════════════════════════════════╣
+║ RESULTADOS POR TANDA                                   ║
+║ TANDA 1: 162/200 OK                                  ║
+║ TANDA 2: 85/150 OK                                   ║
+║ TANDA 3: 28/80 OK                                    ║
+║ TANDA 4: 9/70 OK                                     ║
+╠══════════════════════════════════════════════════════════╣
+║ RESULTADOS POR PRIORIDAD                               ║
+║ maxima    : 129/207 OK                            ║
+║ media     : 100/176 OK                            ║
+║ baja      : 55/117 OK                             ║
+╠══════════════════════════════════════════════════════════╣
+║ ERRORES POR PASO                                       ║
+║ appointment         : 216                           ║
+╠══════════════════════════════════════════════════════════╣
+║ VEREDICTO: ❌ REVISAR ANTES DEL LANZAMIENTO               ║
+╚══════════════════════════════════════════════════════════╝
+
+📄 Reporte guardado en: /home/ubuntu/booking-app/test/stress-real-report-2026-03-24T13-13-20-255Z.json

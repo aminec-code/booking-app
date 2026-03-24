@@ -40,28 +40,29 @@ const CONFIG = {
 
   // ── VENTANA DE FECHAS POR PRIORIDAD ───────
   // Todos los niveles ven 4 días vista. La diferencia es qué días ven:
-  // - Máxima: desde hoy (los más cercanos)
-  // - Media: desde hoy (solapado con máxima)
-  // - Baja: desde más adelante (días más lejanos)
+  // - Máxima: desde hoy/24 mar (los más cercanos)
+  // - Media: desde el 28 mar (+4 días offset)
+  // - Baja: desde el 2 abr (+9 días offset)
+  // expansion=0 y maxDias=4 → NUNCA se expande más allá de 4 días
   VENTANA_FECHAS: {
     maxima: {
       ventanaInicial: 4,
-      expansion:      2,
-      maxDias:        14,
+      expansion:      0,
+      maxDias:        4,
       fechaInicio:    '2026-03-24',
       fechaMax:       '2026-04-17',
     },
     media: {
       ventanaInicial: 4,
-      expansion:      2,
-      maxDias:        14,
-      fechaInicio:    '2026-03-24',
+      expansion:      0,
+      maxDias:        4,
+      fechaInicio:    '2026-03-28',
       fechaMax:       '2026-04-17',
     },
     baja: {
       ventanaInicial: 4,
-      expansion:      2,
-      maxDias:        14,
+      expansion:      0,
+      maxDias:        4,
       fechaInicio:    '2026-04-02',
       fechaMax:       '2026-04-17',
     },

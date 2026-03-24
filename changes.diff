@@ -1,0 +1,272 @@
+diff --git a/booking.js b/booking.js
+index 612f136..79da16a 100644
+--- a/booking.js
++++ b/booking.js
+@@ -97,7 +97,7 @@ function validateContacto() {
+   const instagram = document.getElementById('instagram')?.value.trim();
+ 
+   const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email || '');
+-  const telOk   = (tel || '').length >= 6;
++  const telOk   = /^[\d\s\-().+]{6,20}$/.test(tel || '');
+ 
+   const valid = nombre && apellidos && emailOk && telOk && instagram;
+ 
+@@ -345,7 +345,7 @@ async function confirmBooking() {
+   } catch (err) {
+     clearTimeout(slowTimer);
+     // Si GHL rechaza el slot en el último momento, mostrar aviso inline en lugar de pantalla de error genérica
+-    if (err.errorCode === 'APPOINTMENT_400' || err.errorCode?.includes('APPOINTMENT')) {
++    if (err.errorCode === 'APPOINTMENT_400' || err.errorCode?.includes('APPOINTMENT') || err.errorCode === 'APPOINTMENT_422' || err.errorCode === 'APPOINTMENT_409') {
+       if (btnConfirm) btnConfirm.disabled = true;
+       showSlotUnavailable(bookingState.slotSeleccionado);
+       bookingState.slotSeleccionado = null;
+diff --git a/calendar.js b/calendar.js
+index 5b43285..0c9aa52 100644
+--- a/calendar.js
++++ b/calendar.js
+@@ -123,16 +123,24 @@ async function getAvailableSlotsForDate(fechaKey) {
+   if (allSlots.length === 0) return [];
+ 
+   let freeSlots = null;
++  let ghlFailed = false;
+   try {
+     freeSlots = await ghlGetFreeSlots(fechaKey);
+   } catch (err) {
+-    console.warn('[Calendar] GHL free-slots falló, usando fallback:', err.message);
++    console.warn('[Calendar] GHL free-slots falló:', err.message);
++    ghlFailed = true;
+     freeSlots = null;
+   }
+ 
+-  // Si GHL falló o no devolvió nada → todos los slots libres (fallback graceful)
++  // Si GHL falló por error de red → marcar todos como NO disponibles (seguro)
++  // y señalar que hubo un error para que el UI pueda mostrar un mensaje
++  if (ghlFailed) {
++    return allSlots.map(time => ({ time, available: false, ghlError: true }));
++  }
++
++  // Si GHL respondió pero no devolvió slots → el día no tiene disponibilidad
+   if (freeSlots === null || freeSlots.length === 0) {
+-    return allSlots.map(time => ({ time, available: true }));
++    return allSlots.map(time => ({ time, available: false }));
+   }
+ 
+   // GHL devolvió slots → filtramos contra la lista de libres
+@@ -481,6 +489,36 @@ async function renderSlots(fechaKey, onSlotSelect) {
+     return;
+   }
+ 
++  // Si GHL falló, mostrar mensaje de error con botón de reintento
++  const hasGhlError = slots.some(s => s.ghlError);
++  if (hasGhlError) {
++    container.innerHTML = `
++      <div class="banner banner-amber" style="margin-top:.5rem">
++        <span class="banner-icon">⚠️</span>
++        <div>
++          <span>No se pudo verificar la disponibilidad. </span>
++          <button class="btn btn-ghost" style="margin-top:8px;font-size:.85rem"
++                  onclick="renderSlots('${fechaKey}', onSlotSelected)">
++            Reintentar
++          </button>
++        </div>
++      </div>
++    `;
++    return;
++  }
++
++  // Si ningún slot está disponible
++  const anyAvailable = slots.some(s => s.available);
++  if (!anyAvailable) {
++    container.innerHTML = `
++      <div class="banner banner-neutral" style="margin-top:.5rem">
++        <span class="banner-icon">📅</span>
++        <span>No quedan horarios disponibles para este día. Prueba con otra fecha.</span>
++      </div>
++    `;
++    return;
++  }
++
+   // Zona horaria activa
+   const userTz     = (typeof bookingState !== 'undefined' && bookingState.zonaHoraria)
+                      || Intl.DateTimeFormat().resolvedOptions().timeZone
+@@ -554,19 +592,22 @@ async function renderSlots(fechaKey, onSlotSelect) {
+  * @returns {string} URL de Google Calendar
+  */
+ function buildGoogleCalendarUrl({ nombre, apellidos, fechaKey, hora }) {
+-  const [hh, mm]    = hora.split(':').map(Number);
+-  const startDate   = parseLocalDate(fechaKey);
+-  const endDate     = new Date(startDate.getTime());
++  const [hh, mm] = hora.split(':').map(Number);
++
++  // Usar buildISOWithTimezone para obtener la hora correcta en Madrid
++  const startISO = buildISOWithTimezone(fechaKey, hh, mm, 'Europe/Madrid');
++  const endISO   = buildISOWithTimezone(fechaKey, hh, mm + CONFIG.SLOT_DURATION_MIN, 'Europe/Madrid');
+ 
+-  startDate.setHours(hh, mm, 0, 0);
+-  endDate.setHours(hh, mm + CONFIG.SLOT_DURATION_MIN, 0, 0);
++  // Convertir a UTC para Google Calendar
++  const startUTC = new Date(startISO);
++  const endUTC   = new Date(endISO);
+ 
+   const fmt = d => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+ 
+   const title   = encodeURIComponent(`${CONFIG.APPOINTMENT_TITLE || CONFIG.LAUNCH_NAME} — ${nombre} ${apellidos}`);
+   const details = encodeURIComponent(`Cita reservada a través del sistema de agendamiento.`);
+-  const start   = fmt(startDate);
+-  const end     = fmt(endDate);
++  const start   = fmt(startUTC);
++  const end     = fmt(endUTC);
+ 
+-  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${start}/${end}&details=${details}`;
++  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${start}/${end}&details=${details}&ctz=Europe/Madrid`;
+ }
+diff --git a/ghl.js b/ghl.js
+index 284c853..17cfe16 100644
+--- a/ghl.js
++++ b/ghl.js
+@@ -78,24 +78,43 @@ async function ghlGetFreeSlots(fecha) {
+   const data     = await response.json();
+   ghlLog('free-slots response:', data);
+ 
++  // ── Recoger slots de TODAS las fechas en la respuesta ──
++  // GHL puede devolver slots agrupados bajo múltiples claves de fecha
++  // (ej: slots del día pedido + medianoche del siguiente)
+   let rawSlots = [];
+   if (Array.isArray(data?.slots)) {
+     rawSlots = data.slots;
+-  } else if (data?.[fecha]?.slots) {
+-    rawSlots = data[fecha].slots;
+-  } else if (data?._dates_?.[fecha]?.slots) {
+-    rawSlots = data._dates_[fecha].slots;
+   } else if (Array.isArray(data)) {
+     rawSlots = data;
++  } else if (typeof data === 'object' && data !== null) {
++    // Iterar todas las claves que parezcan fechas (YYYY-MM-DD)
++    for (const key of Object.keys(data)) {
++      if (/^\d{4}-\d{2}-\d{2}$/.test(key) && Array.isArray(data[key]?.slots)) {
++        rawSlots = rawSlots.concat(data[key].slots);
++      }
++    }
++    // Fallback: _dates_ wrapper
++    if (rawSlots.length === 0 && data?._dates_) {
++      for (const key of Object.keys(data._dates_)) {
++        if (Array.isArray(data._dates_[key]?.slots)) {
++          rawSlots = rawSlots.concat(data._dates_[key].slots);
++        }
++      }
++    }
+   }
+ 
+   if (rawSlots.length === 0) return [];
+ 
++  // Parsear a HH:MM en hora Madrid y filtrar solo los que caen en el día pedido
+   return rawSlots.map(slot => {
+     const raw = typeof slot === 'object' ? (slot.startTime ?? slot.start) : slot;
+     const ts  = typeof raw === 'number' ? raw : Date.parse(raw);
+     if (isNaN(ts)) return null;
+-    return new Date(ts).toLocaleTimeString('es-ES', {
++    const d = new Date(ts);
++    // Verificar que la fecha en Madrid corresponde al día pedido
++    const madridDate = d.toLocaleDateString('en-CA', { timeZone: CONFIG.TIMEZONE }); // YYYY-MM-DD
++    if (madridDate !== fecha) return null; // Slot de otro día, ignorar
++    return d.toLocaleTimeString('es-ES', {
+       hour:     '2-digit',
+       minute:   '2-digit',
+       hour12:   false,
+diff --git a/package-lock.json b/package-lock.json
+index 1bb6330..4d626da 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -1,12 +1,12 @@
+ {
+   "name": "booking-app",
+-  "version": "1.0.0",
++  "version": "1.2.1",
+   "lockfileVersion": 3,
+   "requires": true,
+   "packages": {
+     "": {
+       "name": "booking-app",
+-      "version": "1.0.0",
++      "version": "1.2.1",
+       "dependencies": {
+         "dotenv": "^16.4.5",
+         "express": "^4.19.2",
+diff --git a/server.js b/server.js
+index 2bc47d7..f7d0898 100644
+--- a/server.js
++++ b/server.js
+@@ -154,7 +154,7 @@ app.get('/config.js', (req, res) => {
+       { id: 'q8_tiempo',     pregunta: '¿En cuánto tiempo quieres empezar?',                      tipo: 'radio', opciones: [{ label: 'Ahora mismo', value: 'ahora', score: 30 }, { label: 'En el próximo mes', value: '1mes', score: 20 }, { label: 'En 3 meses', value: '3meses', score: 10 }, { label: 'Solo estoy explorando', value: 'explorando', score: 5 }] },
+       { id: 'q9_decisor',    pregunta: '¿Eres tú quien toma la decisión de inversión?',           tipo: 'radio', opciones: [{ label: 'Sí, la decisión es mía', value: 'si', score: 20 }, { label: 'La comparto con otra persona', value: 'compartida', score: 10 }, { label: 'No, decide otra persona', value: 'no', score: 0 }] },
+     ],
+-    SCORE_MAXIMO_POSIBLE: 200,
++    SCORE_MAXIMO_POSIBLE: 215,
+     CONTACT_FALLBACK: {
+       telefono:    '+34 600 000 000',
+       email:       'hola@tudominio.com',
+@@ -182,7 +182,7 @@ function ghlHeaders() {
+ 
+ function ghlFetch(url, options = {}) {
+   const controller = new AbortController();
+-  const timeout    = setTimeout(() => controller.abort(), 10_000);
++  const timeout    = setTimeout(() => controller.abort(), 20_000);
+   return fetch(url, { ...options, signal: controller.signal })
+     .finally(() => clearTimeout(timeout));
+ }
+@@ -404,12 +404,28 @@ app.get('/api/slots', async (req, res) => {
+   if (!fecha || !/^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
+     return res.status(400).json({ error: 'Parámetro fecha inválido' });
+   }
+-  const dayStart = new Date(`${fecha}T00:00:00Z`).getTime();
+-  const dayEnd   = new Date(`${fecha}T23:59:59Z`).getTime();
+-  const params   = new URLSearchParams({
+-    startDate: String(dayStart),
+-    endDate:   String(dayEnd),
+-    timezone:  process.env.TIMEZONE || 'Europe/Madrid',
++
++  // ── Calcular offset de Madrid para la fecha pedida ──
++  // Esto maneja correctamente el cambio DST (CET → CEST)
++  const tz = process.env.TIMEZONE || 'Europe/Madrid';
++  const refDate = new Date(`${fecha}T12:00:00Z`); // mediodía UTC como referencia
++  const madridStr = refDate.toLocaleString('en-US', { timeZone: tz, hour12: false,
++    year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
++  // Parsear para obtener el offset
++  const [datePart, timePart] = madridStr.split(', ');
++  const [mm, dd, yy] = datePart.split('/');
++  const [hh, mi] = timePart.split(':');
++  const madridRef = new Date(Date.UTC(+yy, +mm - 1, +dd, +hh % 24, +mi));
++  const offsetMs = madridRef.getTime() - refDate.getTime();
++
++  // Rango del día completo en hora Madrid, convertido a UTC epoch ms
++  const dayStartMadrid = new Date(`${fecha}T00:00:00Z`).getTime() - offsetMs;
++  const dayEndMadrid   = new Date(`${fecha}T23:59:59Z`).getTime() - offsetMs;
++
++  const params = new URLSearchParams({
++    startDate: String(dayStartMadrid),
++    endDate:   String(dayEndMadrid),
++    timezone:  tz,
+   });
+   try {
+     const r    = await ghlFetch(`${GHL}/calendars/${process.env.GHL_CALENDAR_ID}/free-slots?${params}`, { headers: ghlHeaders() });
+@@ -478,14 +494,14 @@ app.get('/api/admin/appointments', requireAdmin, async (req, res) => {
+   }
+ });
+ 
+-// ── GET /api/admin/backup ─────────────────────────────────
+-app.get('/api/admin/backup', requireAdmin, (req, res) => {
+-  res.json(readBackupDB());
++// ── GET /api/admin/backup ─────────────────────────────
++app.get('/api/admin/backup', requireAdmin, async (req, res) => {
++  res.json(await readBackupDB());
+ });
+ 
+-// ── GET /api/admin/failed-bookings ────────────────────────
+-app.get('/api/admin/failed-bookings', requireAdmin, (req, res) => {
+-  const all = readFailedBookings();
++// ── GET /api/admin/failed-bookings ────────────────────
++app.get('/api/admin/failed-bookings', requireAdmin, async (req, res) => {
++  const all = await readFailedBookings();
+   res.json({
+     pendientes: all.filter(r => !r.resuelto),
+     resueltos:  all.filter(r =>  r.resuelto),

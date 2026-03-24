@@ -78,7 +78,8 @@ async function getAvailableDatesConExpansion(prioridad) {
       }
     }
 
-    // Sin disponibilidad — expande
+    // Sin disponibilidad — expande (si expansion > 0)
+    if (cfg.expansion === 0) break;   // ← no hay expansión, salir ya
     ventanaActual += cfg.expansion;
     if (ventanaActual > cfg.maxDias) break;
   }
