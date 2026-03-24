@@ -39,31 +39,35 @@ const CONFIG = {
   },
 
   // ── VENTANA DE FECHAS POR PRIORIDAD ───────
+  // Todos los niveles ven 4 días vista. La diferencia es qué días ven:
+  // - Máxima: desde hoy (los más cercanos)
+  // - Media: desde hoy (solapado con máxima)
+  // - Baja: desde más adelante (días más lejanos)
   VENTANA_FECHAS: {
     maxima: {
       ventanaInicial: 4,
       expansion:      2,
       maxDias:        14,
       fechaInicio:    '2026-03-24',
-      fechaMax:       '2026-04-06',
+      fechaMax:       '2026-04-17',
     },
     media: {
-      ventanaInicial: 7,
-      expansion:      3,
-      maxDias:        21,
+      ventanaInicial: 4,
+      expansion:      2,
+      maxDias:        14,
       fechaInicio:    '2026-03-24',
-      fechaMax:       '2026-04-13',
+      fechaMax:       '2026-04-17',
     },
     baja: {
-      ventanaInicial: 14,
-      expansion:      5,
-      maxDias:        30,
+      ventanaInicial: 4,
+      expansion:      2,
+      maxDias:        14,
       fechaInicio:    '2026-04-02',
-      fechaMax:       '2026-04-20',
+      fechaMax:       '2026-04-17',
     },
   },
 
-  // ── HORARIO GENERAL (lunes a viernes) ─────
+  // ── HORARIO GENERAL (todos los días) ───────
   HORARIO: { start: 10, end: 22 },
 
   // ── EXCEPCIONES DE HORARIO POR DÍA ────────

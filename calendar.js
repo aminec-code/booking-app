@@ -28,23 +28,21 @@ function monthName(date) {
 }
 
 /**
- * Devuelve los próximos N días hábiles desde una fecha, sin superar fechaMax
+ * Devuelve los próximos N días (incluyendo fines de semana) desde una fecha,
+ * sin superar fechaMax. La disponibilidad real la gestiona GHL.
  * @param {Date} desde
  * @param {number} cantidad
  * @param {string} fechaMax — 'YYYY-MM-DD'
  * @returns {Date[]}
  */
-function getNextBusinessDays(desde, cantidad, fechaMax) {
+function getNextDays(desde, cantidad, fechaMax) {
   const dias   = [];
   const limite = new Date(fechaMax + 'T23:59:59');
   const cursor = new Date(desde);
   cursor.setHours(0, 0, 0, 0);
 
   while (dias.length < cantidad && cursor <= limite) {
-    const dow = cursor.getDay();
-    if (dow !== 0 && dow !== 6) {
-      dias.push(new Date(cursor));
-    }
+    dias.push(new Date(cursor));
     cursor.setDate(cursor.getDate() + 1);
   }
   return dias;
@@ -68,7 +66,7 @@ async function getAvailableDatesConExpansion(prioridad) {
   const maxExpansiones = 5;
 
   for (let intento = 0; intento <= maxExpansiones; intento++) {
-    const fechas = getNextBusinessDays(desde, ventanaActual, cfg.fechaMax);
+    const fechas = getNextDays(desde, ventanaActual, cfg.fechaMax);
 
     if (fechas.length === 0) break;
 
