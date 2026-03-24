@@ -294,6 +294,31 @@ function onSlotSelected(slotTime) {
 async function confirmBooking() {
   if (!bookingState.fechaSeleccionada || !bookingState.slotSeleccionado) return;
 
+  const btnConfirm = document.getElementById('btn-confirm');
+  if (btnConfirm) { btnConfirm.disabled = true; btnConfirm.textContent = 'Verificando disponibilidad…'; }
+
+  // ── Paso 0: re-validar el slot antes de enviar a GHL ──────────────────────
+  try {
+    const freeSlots = await ghlGetFreeSlots(bookingState.fechaSeleccionada);
+    const slotMadrid = bookingState.slotSeleccionado; // 'HH:MM' en Madrid
+
+    const disponible = freeSlots.some(s => {
+      const t = typeof s === 'string' ? s : (s.startTime || s.start || '');
+      return t.startsWith(slotMadrid);
+    });
+
+    if (!disponible) {
+      // El slot ya no está libre — mostrarlo como ocupado y pedir nueva selección
+      if (btnConfirm) { btnConfirm.disabled = true; btnConfirm.textContent = 'Confirmar reserva →'; }
+      showSlotUnavailable(bookingState.slotSeleccionado);
+      bookingState.slotSeleccionado = null;
+      return;
+    }
+  } catch (_) {
+    // Si la validación falla por red, dejamos pasar y que GHL decida
+  }
+
+  if (btnConfirm) btnConfirm.textContent = 'Confirmar reserva →';
   showLoadingState();
 
   const slowTimer = setTimeout(() => {
@@ -319,8 +344,65 @@ async function confirmBooking() {
 
   } catch (err) {
     clearTimeout(slowTimer);
-    showErrorState(err.message, err.errorCode || null);
+    // Si GHL rechaza el slot en el último momento, mostrar aviso inline en lugar de pantalla de error genérica
+    if (err.errorCode === 'APPOINTMENT_400' || err.errorCode?.includes('APPOINTMENT')) {
+      if (btnConfirm) btnConfirm.disabled = true;
+      showSlotUnavailable(bookingState.slotSeleccionado);
+      bookingState.slotSeleccionado = null;
+      // Restaurar el calendario si fue reemplazado por el loading
+      const cal = document.getElementById('screen-calendario');
+      if (cal._originalContent) {
+        cal.innerHTML = cal._originalContent;
+        initCalendarStep();
+        renderSlots(bookingState.fechaSeleccionada, onSlotSelected);
+      }
+    } else {
+      showErrorState(err.message, err.errorCode || null);
+    }
   }
+}
+
+/**
+ * Muestra un aviso inline de slot ocupado, marca el slot como no disponible
+ * y pide al usuario que elija otro.
+ */
+function showSlotUnavailable(slotTime) {
+  // Marcar el slot como ocupado visualmente
+  const slotEl = document.querySelector(`.slot[data-time="${slotTime}"]`);
+  if (slotEl) {
+    slotEl.classList.remove('slot-selected');
+    slotEl.classList.add('slot-taken');
+    slotEl.style.opacity        = '0.4';
+    slotEl.style.pointerEvents  = 'none';
+    slotEl.style.textDecoration = 'line-through';
+  }
+
+  // Mostrar aviso encima de los slots
+  const container = document.getElementById('slots-container');
+  const existing  = document.getElementById('slot-unavailable-msg');
+  if (existing) existing.remove();
+
+  const msg = document.createElement('div');
+  msg.id    = 'slot-unavailable-msg';
+  msg.style.cssText = `
+    background:#FEF3C7;border:1.5px solid #F59E0B;border-radius:10px;
+    padding:12px 16px;margin-bottom:12px;display:flex;align-items:flex-start;gap:10px;
+  `;
+  msg.innerHTML = `
+    <span style="font-size:1.1rem;flex-shrink:0">⚠️</span>
+    <div>
+      <p style="font-weight:700;font-size:.875rem;color:#92400E;margin:0 0 2px">
+        Esta hora ya no está disponible
+      </p>
+      <p style="font-size:.8rem;color:#B45309;margin:0">
+        Alguien acaba de reservar ese horario. Por favor elige otra hora.
+      </p>
+    </div>
+  `;
+  if (container) container.prepend(msg);
+
+  // Hacer scroll hasta los slots para que el usuario vea el aviso
+  container?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 // ── ESTADOS DE CARGA / ERROR ─────────────────
