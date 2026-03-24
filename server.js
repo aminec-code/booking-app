@@ -396,6 +396,19 @@ app.post('/api/booking', async (req, res) => {
       const msg = parseGHLError(bodyText);
       writeLog('CITA', r.status, bodyText, leadMeta);
       appendFailedBookingFull({ ...leadMeta, fechaIntentada: leadMeta?.fecha, horaIntentada: leadMeta?.hora, errorStep: 'appointment', errorCode: r.status, errorMessage: msg });
+
+      // ── ROLLBACK: Eliminar la oportunidad huérfana si la cita falló ──
+      if (opportunityId) {
+        console.log(`${tag} ROLLBACK — Eliminando oportunidad huérfana ${opportunityId}`);
+        ghlFetch(`${GHL}/opportunities/${opportunityId}`, {
+          method:  'DELETE',
+          headers: ghlHeaders(),
+        }).then(dr => {
+          if (dr.ok) console.log(`${tag} ROLLBACK OK — Oportunidad ${opportunityId} eliminada`);
+          else dr.text().then(t => console.warn(`${tag} ROLLBACK fallido (${dr.status}):`, t.slice(0, 200)));
+        }).catch(err => console.warn(`${tag} ROLLBACK error:`, err.message));
+      }
+
       return res.json({ success: false, errorStep: 'appointment', errorCode: r.status, errorMessage: msg });
     }
     const data     = JSON.parse(bodyText);
@@ -406,6 +419,19 @@ app.post('/api/booking', async (req, res) => {
   } catch (err) {
     writeLog('CITA', 0, err.message, leadMeta);
     appendFailedBookingFull({ ...leadMeta, fechaIntentada: leadMeta?.fecha, horaIntentada: leadMeta?.hora, errorStep: 'appointment', errorCode: 0, errorMessage: err.message });
+
+    // ── ROLLBACK: Eliminar la oportunidad huérfana si la cita falló ──
+    if (opportunityId) {
+      console.log(`${tag} ROLLBACK — Eliminando oportunidad huérfana ${opportunityId}`);
+      ghlFetch(`${GHL}/opportunities/${opportunityId}`, {
+        method:  'DELETE',
+        headers: ghlHeaders(),
+      }).then(dr => {
+        if (dr.ok) console.log(`${tag} ROLLBACK OK — Oportunidad ${opportunityId} eliminada`);
+        else dr.text().then(t => console.warn(`${tag} ROLLBACK fallido (${dr.status}):`, t.slice(0, 200)));
+      }).catch(e => console.warn(`${tag} ROLLBACK error:`, e.message));
+    }
+
     return res.json({ success: false, errorStep: 'appointment', errorCode: 0, errorMessage: err.message });
   }
 
