@@ -367,15 +367,9 @@ async function confirmBooking() {
  * y pide al usuario que elija otro.
  */
 function showSlotUnavailable(slotTime) {
-  // Marcar el slot como ocupado visualmente
+  // Eliminar el slot del DOM — si está ocupado no debe ser seleccionable
   const slotEl = document.querySelector(`.slot[data-time="${slotTime}"]`);
-  if (slotEl) {
-    slotEl.classList.remove('slot-selected');
-    slotEl.classList.add('slot-taken');
-    slotEl.style.opacity        = '0.4';
-    slotEl.style.pointerEvents  = 'none';
-    slotEl.style.textDecoration = 'line-through';
-  }
+  if (slotEl) slotEl.remove();
 
   // Mostrar aviso encima de los slots
   const container = document.getElementById('slots-container');
