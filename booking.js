@@ -424,40 +424,34 @@ function setLoadingStatus(msg) {
 function showErrorState(_errorMsg, errorCode = null) {
   const cal = document.getElementById('screen-calendario');
   if (!cal) return;
+
+  // Mensaje amigable según tipo de error
+  const isDataError = errorCode && (errorCode.startsWith('CONTACT_4') || errorCode === 'CONTACT_400' || errorCode === 'CONTACT_422');
+  const friendlyMsg = isDataError
+    ? 'Parece que algún dato que nos has proporcionado no es correcto. Por favor, revisa tu email y teléfono e inténtalo de nuevo.'
+    : 'Parece que hemos tenido algún problema. Por favor, vuelve a intentarlo o usa nuestro calendario de respaldo.';
+
   cal.innerHTML = `
     <div style="padding:2rem 0;text-align:center">
       <div style="font-size:2.5rem;margin-bottom:1rem">⚠️</div>
       <h2 style="font-family:'Syne',sans-serif;font-weight:700;font-size:1.25rem;margin-bottom:.75rem;color:var(--text)">
         No se pudo confirmar la reserva
       </h2>
-      <p style="color:var(--text2);font-size:.9rem;margin-bottom:.75rem;max-width:380px;margin-left:auto;margin-right:auto">
-        Ha ocurrido un error técnico. Por favor contáctanos directamente:
+      <p style="color:var(--text2);font-size:.9rem;margin-bottom:1.25rem;max-width:380px;margin-left:auto;margin-right:auto;line-height:1.5">
+        ${friendlyMsg}
       </p>
-      ${errorCode ? `<p style="font-size:.75rem;color:var(--text3);margin-bottom:.5rem">Código de error: <code>${escapeHtml(errorCode)}</code></p>` : ''}
-      <p style="font-size:.875rem;color:var(--text);margin-bottom:.5rem">
-        📞 <strong>${escapeHtml(CONFIG.CONTACT_FALLBACK.telefono)}</strong>
-      </p>
-      <p style="font-size:.875rem;color:var(--text);margin-bottom:1rem">
-        ✉️ <strong>${escapeHtml(CONFIG.CONTACT_FALLBACK.email)}</strong>
-      </p>
-      <p style="font-size:.8rem;color:var(--text3);margin-bottom:1rem">
-        Indica: <strong>${escapeHtml(bookingState.nombre)} ${escapeHtml(bookingState.apellidos)}</strong>
-        · ${escapeHtml(bookingState.fechaSeleccionada)} · ${escapeHtml(bookingState.slotSeleccionado)}
-      </p>
-      ${CONFIG.CONTACT_FALLBACK.calendarUrl ? `
-      <div style="margin:0 auto 1.25rem;padding:1rem 1.25rem;background:#F5EDD6;border-radius:12px;max-width:360px;border:1.5px solid #B8963E">
-        <p style="font-size:.85rem;color:#0D1B2A;margin-bottom:.75rem;line-height:1.5">
-          Parece que no tenemos disponible esta hora, pero puedes agendar tu auditoría directamente haciendo clic en el botón de abajo.
-        </p>
-        <a href="${CONFIG.CONTACT_FALLBACK.calendarUrl}" target="_blank" rel="noopener noreferrer"
-           style="display:inline-block;background:#0D1B2A;color:#fff;font-family:'Inter',sans-serif;font-weight:600;font-size:.875rem;padding:.75rem 1.5rem;border-radius:8px;text-decoration:none">
-          Agendar en calendario →
-        </a>
-      </div>
-      ` : ''}
-      <div style="display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap">
+      <div style="display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap;margin-bottom:1.25rem">
         <button class="btn btn-primary" id="btn-retry">Reintentar</button>
         <button class="btn btn-ghost"   id="btn-back-error">Volver al calendario</button>
+      </div>
+      <div style="margin:0 auto;padding:1rem 1.25rem;background:#F5EDD6;border-radius:12px;max-width:360px;border:1.5px solid #B8963E">
+        <p style="font-size:.85rem;color:#0D1B2A;margin-bottom:.75rem;line-height:1.5">
+          Si el problema persiste, puedes agendar tu auditoría directamente desde nuestro calendario de respaldo:
+        </p>
+        <a href="https://focusevent.online/calendario/" target="_blank" rel="noopener noreferrer"
+           style="display:inline-block;background:#0D1B2A;color:#fff;font-family:'Inter',sans-serif;font-weight:600;font-size:.875rem;padding:.75rem 1.5rem;border-radius:8px;text-decoration:none">
+          Calendario de respaldo →
+        </a>
       </div>
     </div>
   `;
