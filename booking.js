@@ -97,15 +97,28 @@ function validateContacto() {
   const instagram = document.getElementById('instagram')?.value.trim();
 
   const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email || '');
-  const telOk   = /^[\d\s\-().+]{6,20}$/.test(tel || '');
 
-  const valid = nombre && apellidos && emailOk && telOk && instagram;
+  // Validar teléfono: solo dígitos (sin +, sin espacios extra)
+  // Si el lead mete un prefijo (+33, +44...) dentro del campo, avisar
+  const telDigits = (tel || '').replace(/[\s\-().]/g, '');
+  const hasPrefix = /^\+/.test(telDigits);
+  const telClean  = telDigits.replace(/^\+/, '');
+  const telOk     = /^\d{6,15}$/.test(telClean);
+
+  let telWarning = '';
+  if (tel && hasPrefix) {
+    telWarning = 'No incluyas el prefijo (+34, +33…), ya está seleccionado arriba';
+  } else if (tel && !telOk) {
+    telWarning = 'Introduce un teléfono válido (solo números, 6-15 dígitos)';
+  }
+
+  const valid = nombre && apellidos && emailOk && telOk && !hasPrefix && instagram;
 
   const btn = document.getElementById('btn-contacto');
   if (btn) btn.disabled = !valid;
 
   showFieldError('email-error',    email && !emailOk ? 'Introduce un email válido' : '');
-  showFieldError('telefono-error', tel   && !telOk   ? 'Introduce un teléfono válido' : '');
+  showFieldError('telefono-error', telWarning);
 
   return !!valid;
 }
@@ -117,7 +130,10 @@ function goToQuiz() {
   bookingState.nombre    = document.getElementById('nombre')?.value.trim()    || '';
   bookingState.apellidos = document.getElementById('apellidos')?.value.trim() || '';
   bookingState.email     = document.getElementById('email')?.value.trim()     || '';
-  bookingState.telefono  = prefix + document.getElementById('telefono')?.value.trim();
+  const rawTel = document.getElementById('telefono')?.value.trim() || '';
+  // Limpiar: quitar espacios, guiones, paréntesis, y cualquier + residual
+  const cleanTel = rawTel.replace(/[\s\-().+]/g, '');
+  bookingState.telefono  = prefix + cleanTel;
   bookingState.instagram = document.getElementById('instagram')?.value.trim() || '';
 
   bookingState.quizIndex     = 0;
