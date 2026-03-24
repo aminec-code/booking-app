@@ -123,16 +123,24 @@ async function getAvailableSlotsForDate(fechaKey) {
   if (allSlots.length === 0) return [];
 
   let freeSlots = null;
+  let ghlFailed = false;
   try {
     freeSlots = await ghlGetFreeSlots(fechaKey);
   } catch (err) {
-    console.warn('[Calendar] GHL free-slots falló, usando fallback:', err.message);
+    console.warn('[Calendar] GHL free-slots falló:', err.message);
+    ghlFailed = true;
     freeSlots = null;
   }
 
-  // Si GHL falló o no devolvió nada → todos los slots libres (fallback graceful)
+  // Si GHL falló por error de red → marcar todos como NO disponibles (seguro)
+  // y señalar que hubo un error para que el UI pueda mostrar un mensaje
+  if (ghlFailed) {
+    return allSlots.map(time => ({ time, available: false, ghlError: true }));
+  }
+
+  // Si GHL respondió pero no devolvió slots → el día no tiene disponibilidad
   if (freeSlots === null || freeSlots.length === 0) {
-    return allSlots.map(time => ({ time, available: true }));
+    return allSlots.map(time => ({ time, available: false }));
   }
 
   // GHL devolvió slots → filtramos contra la lista de libres
@@ -481,6 +489,36 @@ async function renderSlots(fechaKey, onSlotSelect) {
     return;
   }
 
+  // Si GHL falló, mostrar mensaje de error con botón de reintento
+  const hasGhlError = slots.some(s => s.ghlError);
+  if (hasGhlError) {
+    container.innerHTML = `
+      <div class="banner banner-amber" style="margin-top:.5rem">
+        <span class="banner-icon">⚠️</span>
+        <div>
+          <span>No se pudo verificar la disponibilidad. </span>
+          <button class="btn btn-ghost" style="margin-top:8px;font-size:.85rem"
+                  onclick="renderSlots('${fechaKey}', onSlotSelected)">
+            Reintentar
+          </button>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  // Si ningún slot está disponible
+  const anyAvailable = slots.some(s => s.available);
+  if (!anyAvailable) {
+    container.innerHTML = `
+      <div class="banner banner-neutral" style="margin-top:.5rem">
+        <span class="banner-icon">📅</span>
+        <span>No quedan horarios disponibles para este día. Prueba con otra fecha.</span>
+      </div>
+    `;
+    return;
+  }
+
   // Zona horaria activa
   const userTz     = (typeof bookingState !== 'undefined' && bookingState.zonaHoraria)
                      || Intl.DateTimeFormat().resolvedOptions().timeZone
@@ -554,19 +592,22 @@ async function renderSlots(fechaKey, onSlotSelect) {
  * @returns {string} URL de Google Calendar
  */
 function buildGoogleCalendarUrl({ nombre, apellidos, fechaKey, hora }) {
-  const [hh, mm]    = hora.split(':').map(Number);
-  const startDate   = parseLocalDate(fechaKey);
-  const endDate     = new Date(startDate.getTime());
+  const [hh, mm] = hora.split(':').map(Number);
 
-  startDate.setHours(hh, mm, 0, 0);
-  endDate.setHours(hh, mm + CONFIG.SLOT_DURATION_MIN, 0, 0);
+  // Usar buildISOWithTimezone para obtener la hora correcta en Madrid
+  const startISO = buildISOWithTimezone(fechaKey, hh, mm, 'Europe/Madrid');
+  const endISO   = buildISOWithTimezone(fechaKey, hh, mm + CONFIG.SLOT_DURATION_MIN, 'Europe/Madrid');
+
+  // Convertir a UTC para Google Calendar
+  const startUTC = new Date(startISO);
+  const endUTC   = new Date(endISO);
 
   const fmt = d => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
 
   const title   = encodeURIComponent(`${CONFIG.APPOINTMENT_TITLE || CONFIG.LAUNCH_NAME} — ${nombre} ${apellidos}`);
   const details = encodeURIComponent(`Cita reservada a través del sistema de agendamiento.`);
-  const start   = fmt(startDate);
-  const end     = fmt(endDate);
+  const start   = fmt(startUTC);
+  const end     = fmt(endUTC);
 
-  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${start}/${end}&details=${details}`;
+  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${start}/${end}&details=${details}&ctz=Europe/Madrid`;
 }

@@ -154,7 +154,25 @@ app.get('/config.js', (req, res) => {
       { id: 'q8_tiempo',     pregunta: '¿En cuánto tiempo quieres empezar?',                      tipo: 'radio', opciones: [{ label: 'Ahora mismo', value: 'ahora', score: 30 }, { label: 'En el próximo mes', value: '1mes', score: 20 }, { label: 'En 3 meses', value: '3meses', score: 10 }, { label: 'Solo estoy explorando', value: 'explorando', score: 5 }] },
       { id: 'q9_decisor',    pregunta: '¿Eres tú quien toma la decisión de inversión?',           tipo: 'radio', opciones: [{ label: 'Sí, la decisión es mía', value: 'si', score: 20 }, { label: 'La comparto con otra persona', value: 'compartida', score: 10 }, { label: 'No, decide otra persona', value: 'no', score: 0 }] },
     ],
-    SCORE_MAXIMO_POSIBLE: 200,
+    SCORE_MAXIMO_POSIBLE: 215,
+    TIERS: {
+      vip: {
+        label: 'Prioritario',
+        inversiones: ['+3000', '1000-3000'],
+        semanas: [
+          { start: '2026-03-24', end: '2026-03-30' },
+          { start: '2026-03-31', end: '2026-04-06' },
+        ],
+      },
+      basico: {
+        label: 'Estándar',
+        inversiones: ['300-1000', '0-300'],
+        semanas: [
+          { start: '2026-04-02', end: '2026-04-13' },
+          { start: '2026-04-14', end: '2026-04-20' },
+        ],
+      },
+    },
     CONTACT_FALLBACK: {
       telefono:    '+34 600 000 000',
       email:       'hola@tudominio.com',
@@ -182,7 +200,7 @@ function ghlHeaders() {
 
 function ghlFetch(url, options = {}) {
   const controller = new AbortController();
-  const timeout    = setTimeout(() => controller.abort(), 10_000);
+  const timeout    = setTimeout(() => controller.abort(), 20_000);
   return fetch(url, { ...options, signal: controller.signal })
     .finally(() => clearTimeout(timeout));
 }
@@ -404,12 +422,28 @@ app.get('/api/slots', async (req, res) => {
   if (!fecha || !/^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
     return res.status(400).json({ error: 'Parámetro fecha inválido' });
   }
-  const dayStart = new Date(`${fecha}T00:00:00Z`).getTime();
-  const dayEnd   = new Date(`${fecha}T23:59:59Z`).getTime();
-  const params   = new URLSearchParams({
-    startDate: String(dayStart),
-    endDate:   String(dayEnd),
-    timezone:  process.env.TIMEZONE || 'Europe/Madrid',
+
+  // ── Calcular offset de Madrid para la fecha pedida ──
+  // Esto maneja correctamente el cambio DST (CET → CEST)
+  const tz = process.env.TIMEZONE || 'Europe/Madrid';
+  const refDate = new Date(`${fecha}T12:00:00Z`); // mediodía UTC como referencia
+  const madridStr = refDate.toLocaleString('en-US', { timeZone: tz, hour12: false,
+    year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+  // Parsear para obtener el offset
+  const [datePart, timePart] = madridStr.split(', ');
+  const [mm, dd, yy] = datePart.split('/');
+  const [hh, mi] = timePart.split(':');
+  const madridRef = new Date(Date.UTC(+yy, +mm - 1, +dd, +hh % 24, +mi));
+  const offsetMs = madridRef.getTime() - refDate.getTime();
+
+  // Rango del día completo en hora Madrid, convertido a UTC epoch ms
+  const dayStartMadrid = new Date(`${fecha}T00:00:00Z`).getTime() - offsetMs;
+  const dayEndMadrid   = new Date(`${fecha}T23:59:59Z`).getTime() - offsetMs;
+
+  const params = new URLSearchParams({
+    startDate: String(dayStartMadrid),
+    endDate:   String(dayEndMadrid),
+    timezone:  tz,
   });
   try {
     const r    = await ghlFetch(`${GHL}/calendars/${process.env.GHL_CALENDAR_ID}/free-slots?${params}`, { headers: ghlHeaders() });
@@ -478,14 +512,14 @@ app.get('/api/admin/appointments', requireAdmin, async (req, res) => {
   }
 });
 
-// ── GET /api/admin/backup ─────────────────────────────────
-app.get('/api/admin/backup', requireAdmin, (req, res) => {
-  res.json(readBackupDB());
+// ── GET /api/admin/backup ─────────────────────────────
+app.get('/api/admin/backup', requireAdmin, async (req, res) => {
+  res.json(await readBackupDB());
 });
 
-// ── GET /api/admin/failed-bookings ────────────────────────
-app.get('/api/admin/failed-bookings', requireAdmin, (req, res) => {
-  const all = readFailedBookings();
+// ── GET /api/admin/failed-bookings ────────────────────
+app.get('/api/admin/failed-bookings', requireAdmin, async (req, res) => {
+  const all = await readFailedBookings();
   res.json({
     pendientes: all.filter(r => !r.resuelto),
     resueltos:  all.filter(r =>  r.resuelto),

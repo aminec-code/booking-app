@@ -97,7 +97,7 @@ function validateContacto() {
   const instagram = document.getElementById('instagram')?.value.trim();
 
   const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email || '');
-  const telOk   = (tel || '').length >= 6;
+  const telOk   = /^[\d\s\-().+]{6,20}$/.test(tel || '');
 
   const valid = nombre && apellidos && emailOk && telOk && instagram;
 
@@ -345,7 +345,7 @@ async function confirmBooking() {
   } catch (err) {
     clearTimeout(slowTimer);
     // Si GHL rechaza el slot en el último momento, mostrar aviso inline en lugar de pantalla de error genérica
-    if (err.errorCode === 'APPOINTMENT_400' || err.errorCode?.includes('APPOINTMENT')) {
+    if (err.errorCode === 'APPOINTMENT_400' || err.errorCode?.includes('APPOINTMENT') || err.errorCode === 'APPOINTMENT_422' || err.errorCode === 'APPOINTMENT_409') {
       if (btnConfirm) btnConfirm.disabled = true;
       showSlotUnavailable(bookingState.slotSeleccionado);
       bookingState.slotSeleccionado = null;

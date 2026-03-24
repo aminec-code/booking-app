@@ -136,10 +136,28 @@ async function loadData() {
 
   showLoadingIndicator(false);
 
-  renderMetrics();
-  renderCharts();
-  applyFilters();    // inicializa filtered y llama a renderTable()
-  renderConfigSection();
+  try {
+    renderMetrics();
+  } catch (err) {
+    console.error('[Admin] Error en renderMetrics:', err);
+  }
+  try {
+    renderCharts();
+  } catch (err) {
+    console.error('[Admin] Error en renderCharts:', err);
+  }
+  try {
+    applyFilters();    // inicializa filtered y llama a renderTable()
+  } catch (err) {
+    console.error('[Admin] Error en applyFilters:', err);
+    // Asegurar que renderTable se ejecute aunque applyFilters falle
+    try { renderTable(); } catch (_) {}
+  }
+  try {
+    renderConfigSection();
+  } catch (err) {
+    console.error('[Admin] Error en renderConfigSection:', err);
+  }
 }
 
 function showLoadingIndicator(loading) {
@@ -238,9 +256,9 @@ function detectTier(apt) {
   }
 
   // Por inversión declarada
-  if (apt.inversion) {
+  if (apt.inversion && CONFIG.TIERS) {
     for (const [key, cfg] of Object.entries(CONFIG.TIERS)) {
-      if (cfg.inversiones.includes(apt.inversion)) return key;
+      if (cfg.inversiones && cfg.inversiones.includes(apt.inversion)) return key;
     }
   }
 
@@ -255,8 +273,10 @@ function getAppointmentDate(apt) {
 
 function getWeekRanges() {
   const ranges = [];
+  if (!CONFIG.TIERS) return ranges;
   let sIdx = 1;
   Object.values(CONFIG.TIERS).forEach(tier => {
+    if (!tier.semanas) return;
     tier.semanas.forEach(s => {
       ranges.push({ label: `S${sIdx}`, start: s.start, end: s.end });
       sIdx++;

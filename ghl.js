@@ -78,24 +78,43 @@ async function ghlGetFreeSlots(fecha) {
   const data     = await response.json();
   ghlLog('free-slots response:', data);
 
+  // ── Recoger slots de TODAS las fechas en la respuesta ──
+  // GHL puede devolver slots agrupados bajo múltiples claves de fecha
+  // (ej: slots del día pedido + medianoche del siguiente)
   let rawSlots = [];
   if (Array.isArray(data?.slots)) {
     rawSlots = data.slots;
-  } else if (data?.[fecha]?.slots) {
-    rawSlots = data[fecha].slots;
-  } else if (data?._dates_?.[fecha]?.slots) {
-    rawSlots = data._dates_[fecha].slots;
   } else if (Array.isArray(data)) {
     rawSlots = data;
+  } else if (typeof data === 'object' && data !== null) {
+    // Iterar todas las claves que parezcan fechas (YYYY-MM-DD)
+    for (const key of Object.keys(data)) {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(key) && Array.isArray(data[key]?.slots)) {
+        rawSlots = rawSlots.concat(data[key].slots);
+      }
+    }
+    // Fallback: _dates_ wrapper
+    if (rawSlots.length === 0 && data?._dates_) {
+      for (const key of Object.keys(data._dates_)) {
+        if (Array.isArray(data._dates_[key]?.slots)) {
+          rawSlots = rawSlots.concat(data._dates_[key].slots);
+        }
+      }
+    }
   }
 
   if (rawSlots.length === 0) return [];
 
+  // Parsear a HH:MM en hora Madrid y filtrar solo los que caen en el día pedido
   return rawSlots.map(slot => {
     const raw = typeof slot === 'object' ? (slot.startTime ?? slot.start) : slot;
     const ts  = typeof raw === 'number' ? raw : Date.parse(raw);
     if (isNaN(ts)) return null;
-    return new Date(ts).toLocaleTimeString('es-ES', {
+    const d = new Date(ts);
+    // Verificar que la fecha en Madrid corresponde al día pedido
+    const madridDate = d.toLocaleDateString('en-CA', { timeZone: CONFIG.TIMEZONE }); // YYYY-MM-DD
+    if (madridDate !== fecha) return null; // Slot de otro día, ignorar
+    return d.toLocaleTimeString('es-ES', {
       hour:     '2-digit',
       minute:   '2-digit',
       hour12:   false,
