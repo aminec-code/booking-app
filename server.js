@@ -137,9 +137,9 @@ app.get('/config.js', (req, res) => {
       tags_ghl:  { maxima: 'Maxima-Prioridad', media: 'Media-Prioridad', baja: 'Baja-Prioridad' },
     },
     VENTANA_FECHAS: {
-      maxima: { ventanaInicial: 4, expansion: 0, maxDias: 4, fechaInicio: '2026-03-24', fechaMax: '2026-04-17' },
-      media:  { ventanaInicial: 4, expansion: 0, maxDias: 4, fechaInicio: '2026-03-28', fechaMax: '2026-04-17' },
-      baja:   { ventanaInicial: 4, expansion: 0, maxDias: 4, fechaInicio: '2026-04-02', fechaMax: '2026-04-17' },
+      maxima: { ventanaInicial: 4, expansion: 2, maxDias: 14, fechaInicio: '2026-03-24', fechaMax: '2026-04-06' },
+      media:  { ventanaInicial: 4, expansion: 3, maxDias: 21, fechaInicio: '2026-03-24', fechaMax: '2026-04-13' },
+      baja:   { ventanaInicial: 4, expansion: 5, maxDias: 30, fechaInicio: '2026-04-02', fechaMax: '2026-04-20' },
     },
     HORARIO: { start: 10, end: 22 },
     HORARIO_EXCEPCIONES: { '2026-03-24': { start: 22, end: 24 } },
