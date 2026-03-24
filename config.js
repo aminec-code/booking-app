@@ -171,7 +171,7 @@ const CONFIG = {
     },
   ],
 
-  SCORE_MAXIMO_POSIBLE: 200,
+  SCORE_MAXIMO_POSIBLE: 215,
 
   // ── FALLBACK DE CONTACTO (si la confirmación falla) ──
   CONTACT_FALLBACK: {
